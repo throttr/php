@@ -41,12 +41,3 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml
-
-      - name: Release
-        if: ${{ github.ref_type == 'tag' }}
-        run: |
-          curl -XPOST -H 'Content-Type: application/json' \
-            "https://packagist.org/api/update-package?username=zen0x7&apiToken=${PACKAGIST_TOKEN}" \
-            -d "{\"repository\":{\"url\":\"https://github.com/throttr/sdk\"}}"
-        env:
-          PACKAGIST_TOKEN: ${{ secrets.PACKAGIST_TOKEN }}
