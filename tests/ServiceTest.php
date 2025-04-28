@@ -56,9 +56,12 @@ final class ServiceTest extends TestCase
      */
     public function testInsertAndQuery(): void
     {
+        $consumerId = '127.0.0.1:33';
+        $resourceId = 'GET /api';
+
         $insertResponse = $this->service->insert(
-            consumerId: 'realuser',
-            resourceId: '/real/resource',
+            consumerId: $consumerId,
+            resourceId: $resourceId,
             ttl: 3,
             ttlType: TTLType::SECONDS,
             quota: 10,
@@ -68,8 +71,8 @@ final class ServiceTest extends TestCase
         $this->assertTrue($insertResponse->can(), 'Insert should be successful');
 
         $queryResponse = $this->service->query(
-            consumerId: 'realuser',
-            resourceId: '/real/resource'
+            consumerId: $consumerId,
+            resourceId: $resourceId
         );
 
         $this->assertTrue($queryResponse->can(), 'Query should be successful');
@@ -85,9 +88,12 @@ final class ServiceTest extends TestCase
      */
     public function testUpdate(): void
     {
+        $consumerId = 'someone';
+        $resourceId = '/updatable';
+
         $insertResponse = $this->service->insert(
-            consumerId: 'otheruser',
-            resourceId: '/real/resource',
+            consumerId: $consumerId,
+            resourceId: $resourceId,
             ttl: 3,
             ttlType: TTLType::SECONDS,
             quota: 10,
@@ -97,8 +103,8 @@ final class ServiceTest extends TestCase
         $this->assertTrue($insertResponse->can(), 'Insert should be successful');
 
         $updateResponse = $this->service->update(
-            consumerId: 'otheruser',
-            resourceId: '/real/resource',
+            consumerId: $consumerId,
+            resourceId: $resourceId,
             attribute: AttributeType::QUOTA,
             change: ChangeType::INCREASE,
             value: 5
@@ -107,8 +113,8 @@ final class ServiceTest extends TestCase
         $this->assertTrue($updateResponse->success(), 'Update should be successful');
 
         $purgeResponse = $this->service->purge(
-            consumerId: 'otheruser',
-            resourceId: '/real/resource'
+            consumerId: $consumerId,
+            resourceId: $resourceId
         );
 
         $this->assertTrue($purgeResponse->success(), 'Purge should be successful');

@@ -22,6 +22,7 @@ use Throttr\SDK\Enum\TTLType;
 use Throttr\SDK\Enum\AttributeType;
 use Throttr\SDK\Enum\ChangeType;
 use RuntimeException;
+use Throttr\SDK\Exceptions\ServiceException;
 
 /**
  * Service
@@ -201,7 +202,7 @@ final class Service
     private function send(Request $request): Response
     {
         if (empty($this->connections)) {
-            throw new RuntimeException('No available connections.'); // @codeCoverageIgnore
+            throw new ServiceException('No available connections.'); // @codeCoverageIgnore
         }
 
         $index = $this->roundRobinIndex;
