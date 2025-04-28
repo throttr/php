@@ -107,6 +107,7 @@ $service->close();
 
 - The protocol assumes Little Endian architecture.
 - The internal message queue ensures requests are processed sequentially.
+- The package is defined to works with protocol 2.0.0 or greatest.
 
 ---
 
