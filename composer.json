@@ -3,7 +3,6 @@
   "description": "Throttr PHP SDK for ultra-fast rate limiting.",
   "type": "library",
   "license": "AGPL-3.0-or-later",
-  "version": "1.0.0",
   "autoload": {
     "psr-4": {
       "Throttr\\SDK\\": "src/"
