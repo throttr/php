@@ -17,15 +17,33 @@
 
 namespace Throttr\SDK;
 
+/**
+ * Pending request
+ */
 class PendingRequest
 {
+    /**
+     * Buffer
+     *
+     * @var string
+     */
     private string $buffer;
 
+    /**
+     * Constructor
+     *
+     * @param string $buffer
+     */
     public function __construct(string $buffer)
     {
         $this->buffer = $buffer;
     }
 
+    /**
+     * Buffer
+     *
+     * @return string
+     */
     public function buffer(): string
     {
         return $this->buffer;

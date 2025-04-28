@@ -28,17 +28,32 @@ final class ServiceTest extends TestCase
 {
     private Service $service;
 
+    /**
+     * Set up
+     *
+     * @return void
+     */
     protected function setUp(): void
     {
         $this->service = new Service('127.0.0.1', 9000, 1);
         $this->service->connect();
     }
 
+    /**
+     * Tear down
+     *
+     * @return void
+     */
     protected function tearDown(): void
     {
         $this->service->close();
     }
 
+    /**
+     * Insert and query
+     *
+     * @return void
+     */
     public function testInsertAndQuery(): void
     {
         $insertResponse = $this->service->insert(
@@ -63,6 +78,11 @@ final class ServiceTest extends TestCase
         $this->assertLessThanOrEqual(3, $queryResponse->ttlRemaining(), 'TTL should be less than 3 seconds');
     }
 
+    /**
+     * Update and purge
+     *
+     * @return void
+     */
     public function testUpdate(): void
     {
         $insertResponse = $this->service->insert(

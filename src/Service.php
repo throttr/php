@@ -23,6 +23,9 @@ use Throttr\SDK\Enum\AttributeType;
 use Throttr\SDK\Enum\ChangeType;
 use RuntimeException;
 
+/**
+ * Service
+ */
 final class Service
 {
     /**
@@ -30,15 +33,45 @@ final class Service
      */
     private array $connections = [];
 
+    /**
+     * Round-robin index
+     *
+     * @var int
+     */
     private int $roundRobinIndex = 0;
+
+    /**
+     * Host
+     *
+     * @var string
+     */
     private string $host;
+
+    /**
+     * Port
+     *
+     * @var int
+     */
     private int $port;
+
+    /**
+     * Maximum connections
+     *
+     * @var int
+     */
     private int $maxConnections;
 
+    /**
+     * Constructor
+     *
+     * @param string $host
+     * @param int $port
+     * @param int $maxConnections
+     */
     public function __construct(string $host, int $port, int $maxConnections)
     {
         if ($maxConnections <= 0) {
-            throw new \InvalidArgumentException('maxConnections must be greater than 0.');
+            throw new \InvalidArgumentException('maxConnections must be greater than 0.'); // @codeCoverageIgnore
         }
 
         $this->host = $host;
@@ -46,6 +79,11 @@ final class Service
         $this->maxConnections = $maxConnections;
     }
 
+    /**
+     * Connect
+     *
+     * @return void
+     */
     public function connect(): void
     {
         for ($i = 0; $i < $this->maxConnections; $i++) {
@@ -54,6 +92,11 @@ final class Service
         }
     }
 
+    /**
+     * Close
+     *
+     * @return void
+     */
     public function close(): void
     {
         foreach ($this->connections as $connection) {
@@ -63,6 +106,17 @@ final class Service
         $this->connections = [];
     }
 
+    /**
+     * Insert
+     *
+     * @param string $consumerId
+     * @param string $resourceId
+     * @param int $ttl
+     * @param TTLType $ttlType
+     * @param int $quota
+     * @param int $usage
+     * @return Response
+     */
     public function insert(string $consumerId, string $resourceId, int $ttl, TTLType $ttlType, int $quota, int $usage = 0): Response
     {
         $request = new Request(
@@ -78,6 +132,13 @@ final class Service
         return $this->send($request);
     }
 
+    /**
+     * Query
+     *
+     * @param string $consumerId
+     * @param string $resourceId
+     * @return Response
+     */
     public function query(string $consumerId, string $resourceId): Response
     {
         $request = new Request(
@@ -89,6 +150,13 @@ final class Service
         return $this->send($request);
     }
 
+    /**
+     * Purge
+     *
+     * @param string $consumerId
+     * @param string $resourceId
+     * @return Response
+     */
     public function purge(string $consumerId, string $resourceId): Response
     {
         $request = new Request(
@@ -100,6 +168,16 @@ final class Service
         return $this->send($request);
     }
 
+    /**
+     * Update
+     *
+     * @param string $consumerId
+     * @param string $resourceId
+     * @param AttributeType $attribute
+     * @param ChangeType $change
+     * @param int $value
+     * @return Response
+     */
     public function update(string $consumerId, string $resourceId, AttributeType $attribute, ChangeType $change, int $value): Response
     {
         $request = new Request(
@@ -114,10 +192,16 @@ final class Service
         return $this->send($request);
     }
 
+    /**
+     * Send
+     *
+     * @param Request $request
+     * @return Response
+     */
     private function send(Request $request): Response
     {
         if (empty($this->connections)) {
-            throw new RuntimeException('No available connections.');
+            throw new RuntimeException('No available connections.'); // @codeCoverageIgnore
         }
 
         $index = $this->roundRobinIndex;

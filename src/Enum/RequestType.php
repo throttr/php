@@ -17,10 +17,28 @@
 
 namespace Throttr\SDK\Enum;
 
+/**
+ * Request type
+ */
 enum RequestType: int
 {
+    /**
+     * Insert
+     */
     case INSERT = 0x01;
+
+    /**
+     * Query
+     */
     case QUERY = 0x02;
+
+    /**
+     * Update
+     */
     case UPDATE = 0x03;
+
+    /**
+     * Purge
+     */
     case PURGE = 0x04;
 }

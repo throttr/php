@@ -20,19 +20,28 @@ namespace Throttr\SDK;
 use RuntimeException;
 use SplQueue;
 
+/**
+ * Connection
+ */
 class Connection
 {
     /**
+     * Socket
+     *
      * @var resource|null
      */
     private $socket;
 
     /**
+     * Queue
+     *
      * @var SplQueue
      */
     private SplQueue $queue;
 
     /**
+     * Busy
+     *
      * @var bool
      */
     private bool $busy = false;
@@ -50,12 +59,12 @@ class Connection
             $address,
             $errno,
             $errstr,
-            5.0, // Timeout en segundos
+            5.0,
             STREAM_CLIENT_CONNECT
         );
 
         if (!$this->socket) {
-            throw new RuntimeException("Failed to connect to {$address}: {$errstr} ({$errno})");
+            throw new RuntimeException("Failed to connect to {$address}: {$errstr} ({$errno})"); // @codeCoverageIgnore
         }
 
         stream_set_timeout($this->socket, 5);
@@ -87,7 +96,7 @@ class Connection
     private function processQueue(): Response
     {
         if ($this->busy || $this->queue->isEmpty()) {
-            throw new RuntimeException('No request to process or connection is busy.');
+            throw new RuntimeException('No request to process or connection is busy.'); // @codeCoverageIgnore
         }
 
         /** @var PendingRequest $pending */
@@ -98,7 +107,7 @@ class Connection
         try {
             $written = fwrite($this->socket, $pending->buffer());
             if ($written === false || $written !== strlen($pending->buffer())) {
-                throw new RuntimeException('Failed to write complete data to socket.');
+                throw new RuntimeException('Failed to write complete data to socket.'); // @codeCoverageIgnore
             }
 
             $firstByteRequestType = ord($pending->buffer()[0]);
@@ -110,12 +119,12 @@ class Connection
                 0x03, // Update
                 0x04  // Purge
                 => 1,
-                default => throw new RuntimeException('Unknown request type: ' . $firstByteRequestType),
+                default => throw new RuntimeException('Unknown request type: ' . $firstByteRequestType), // @codeCoverageIgnore
             };
 
             $responseBytes = fread($this->socket, $responseLength);
             if ($responseBytes === false || strlen($responseBytes) !== $responseLength) {
-                throw new RuntimeException('Failed to read full response payload.');
+                throw new RuntimeException('Failed to read full response payload.'); // @codeCoverageIgnore
             }
 
             return Response::fromBytes($responseBytes);
