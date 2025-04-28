@@ -20,19 +20,28 @@ namespace Throttr\SDK;
 use RuntimeException;
 use SplQueue;
 
+/**
+ * Connection
+ */
 class Connection
 {
     /**
+     * Socket
+     *
      * @var resource|null
      */
     private $socket;
 
     /**
+     * Queue
+     *
      * @var SplQueue
      */
     private SplQueue $queue;
 
     /**
+     * Busy
+     *
      * @var bool
      */
     private bool $busy = false;

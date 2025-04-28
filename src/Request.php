@@ -22,19 +22,95 @@ use Throttr\SDK\Enum\TTLType;
 use Throttr\SDK\Enum\AttributeType;
 use Throttr\SDK\Enum\ChangeType;
 
+/**
+ * Request
+ */
 final class Request
 {
+    /**
+     * Request type
+     *
+     * @var RequestType
+     */
     private RequestType $requestType;
+
+    /**
+     * Quota
+     *
+     * @var int|null
+     */
     private ?int $quota;
+
+    /**
+     * Usage
+     *
+     * @var int|null
+     */
     private ?int $usage;
+
+    /**
+     * TTL type
+     *
+     * @var TTLType|null
+     */
     private ?TTLType $ttlType;
+
+    /**
+     * TTL
+     *
+     * @var int|null
+     */
     private ?int $ttl;
+
+    /**
+     * Attribute type
+     *
+     * @var AttributeType|null
+     */
     private ?AttributeType $attribute;
+
+    /**
+     * Change type
+     *
+     * @var ChangeType|null
+     */
     private ?ChangeType $change;
+
+    /**
+     * Value
+     *
+     * @var int|null
+     */
     private ?int $value;
+
+    /**
+     * Consumer ID
+     *
+     * @var string|null
+     */
     private ?string $consumerId;
+
+    /**
+     * Resource ID
+     *
+     * @var string|null
+     */
     private ?string $resourceId;
 
+    /**
+     * Constructor
+     *
+     * @param RequestType $requestType
+     * @param int|null $quota
+     * @param int|null $usage
+     * @param TTLType|null $ttlType
+     * @param int|null $ttl
+     * @param AttributeType|null $attribute
+     * @param ChangeType|null $change
+     * @param int|null $value
+     * @param string|null $consumerId
+     * @param string|null $resourceId
+     */
     public function __construct(
         RequestType $requestType,
         ?int $quota = null,
@@ -59,6 +135,11 @@ final class Request
         $this->resourceId = $resourceId;
     }
 
+    /**
+     * Serialize insert
+     *
+     * @return string
+     */
     private function serializeInsert(): string
     {
         if ($this->quota === null || $this->usage === null || $this->ttlType === null || $this->ttl === null || $this->consumerId === null || $this->resourceId === null) {
@@ -79,6 +160,11 @@ final class Request
         return $buffer;
     }
 
+    /**
+     * Serialize query or purge
+     *
+     * @return string
+     */
     private function serializeQueryOrPurge(): string
     {
         if ($this->consumerId === null || $this->resourceId === null) {
@@ -95,6 +181,11 @@ final class Request
         return $buffer;
     }
 
+    /**
+     * Serialize update
+     *
+     * @return string
+     */
     private function serializeUpdate(): string
     {
         if ($this->attribute === null || $this->change === null || $this->value === null || $this->consumerId === null || $this->resourceId === null) {
@@ -114,6 +205,12 @@ final class Request
         return $buffer;
     }
 
+    /**
+     * Pack unsigned integer 64 bits little-endian
+     *
+     * @param int $value
+     * @return string
+     */
     private function packUint64LE(int $value): string
     {
         $low = $value & 0xFFFFFFFF;
@@ -121,6 +218,11 @@ final class Request
         return pack('V2', $low, $high);
     }
 
+    /**
+     * To bytes
+     *
+     * @return string
+     */
     public function toBytes(): string
     {
         return match ($this->requestType) {
