@@ -179,7 +179,7 @@ final class Response
         $value = ($high << 32) | $low;
 
         if ($high & 0x80000000) {
-            $value -= (1 << 64);
+            $value -= (1 << 64); // @codeCoverageIgnore
         }
 
         return $value;

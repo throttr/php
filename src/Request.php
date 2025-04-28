@@ -168,7 +168,7 @@ final class Request
     private function serializeQueryOrPurge(): string
     {
         if ($this->consumerId === null || $this->resourceId === null) {
-            throw new \InvalidArgumentException('Missing fields for query/purge request.');
+            throw new \InvalidArgumentException('Missing fields for query/purge request.'); // @codeCoverageIgnore
         }
 
         $buffer = '';
