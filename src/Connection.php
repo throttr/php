@@ -19,6 +19,8 @@ namespace Throttr\SDK;
 
 use RuntimeException;
 use SplQueue;
+use Throttr\SDK\Exceptions\ConnectionException;
+use Throttr\SDK\Exceptions\ProtocolException;
 
 /**
  * Connection
@@ -96,7 +98,7 @@ class Connection
     private function processQueue(): Response
     {
         if ($this->busy || $this->queue->isEmpty()) {
-            throw new RuntimeException('No request to process or connection is busy.'); // @codeCoverageIgnore
+            throw new ConnectionException('No request to process or connection is busy.'); // @codeCoverageIgnore
         }
 
         /** @var PendingRequest $pending */
@@ -107,7 +109,7 @@ class Connection
         try {
             $written = fwrite($this->socket, $pending->buffer());
             if ($written === false || $written !== strlen($pending->buffer())) {
-                throw new RuntimeException('Failed to write complete data to socket.'); // @codeCoverageIgnore
+                throw new ConnectionException('Failed to write complete data to socket.'); // @codeCoverageIgnore
             }
 
             $firstByteRequestType = ord($pending->buffer()[0]);
@@ -119,12 +121,12 @@ class Connection
                 0x03, // Update
                 0x04  // Purge
                 => 1,
-                default => throw new RuntimeException('Unknown request type: ' . $firstByteRequestType), // @codeCoverageIgnore
+                default => throw new ProtocolException('Unknown request type: ' . $firstByteRequestType), // @codeCoverageIgnore
             };
 
             $responseBytes = fread($this->socket, $responseLength);
             if ($responseBytes === false || strlen($responseBytes) !== $responseLength) {
-                throw new RuntimeException('Failed to read full response payload.'); // @codeCoverageIgnore
+                throw new ConnectionException('Failed to read full response payload.'); // @codeCoverageIgnore
             }
 
             return Response::fromBytes($responseBytes);
