@@ -24,8 +24,51 @@ php client for communicating with a Throttr server over TCP.
 
 The SDK enables sending traffic control requests efficiently, without HTTP, respecting the server's native binary protocol.
 
+## Installation
+
+Add the dependency using Composer:
+
+```bash
+composer require throttr/sdk
+```
+
 ## Basic Usage
 
+```php
+<?php
+
+require 'vendor/autoload.php';
+
+use Throttr\SDK\Service;
+use Throttr\SDK\Enum\TTLType;
+
+$service = new Service('127.0.0.1', 9000, 1);
+
+$service->connect();
+
+$service->insert(
+    consumerId: '127.0.0.1',
+    resourceId: '/api/resource',
+    ttl: 5,
+    ttlType: TTLType::MILLISECONDS,
+    quota: 5,
+    usage: 0
+);
+
+$response = $service->query(
+    consumerId: '127.0.0.1',
+    resourceId: '/api/resource',
+);
+
+printf(
+    "Allowed: %s, Remaining: %d, TTL: %dms\n",
+    $response->can() ? 'true' : 'false',
+    $response->quotaRemaining() ?? 0,
+    (int)($response->ttlRemainingSeconds() * 1000)
+);
+
+$service->close();
+```
 
 ## Technical Notes
 
