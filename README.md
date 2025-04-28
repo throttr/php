@@ -49,7 +49,7 @@ $service->connect();
 $service->insert(
     consumerId: '127.0.0.1',
     resourceId: '/api/resource',
-    ttl: 5,
+    ttl: 3000,
     ttlType: TTLType::MILLISECONDS,
     quota: 5,
     usage: 0
@@ -73,10 +73,7 @@ $service->close();
 ## Technical Notes
 
 - The protocol assumes Little Endian architecture.
-- The server does not respond to malformed requests.
-- IP must be a valid IPv4 or IPv6 address; otherwise, an error is thrown.
 - The internal message queue ensures requests are processed sequentially.
-- Throttr independently manages quotas per IP, port, and URL.
 
 ---
 
