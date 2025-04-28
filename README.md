@@ -42,22 +42,32 @@ require 'vendor/autoload.php';
 use Throttr\SDK\Service;
 use Throttr\SDK\Enum\TTLType;
 
-$service = new Service('127.0.0.1', 9000, 1);
+// Configure your instance with 4 connections ...
+$service = new Service('127.0.0.1', 9000, 4);
 
+// Define a consumer ... it can be an IP and port or UUID, whatever ...
+$consumerId = "127.0.0.1";
+
+// Define the resource ... it can be a METHOD + URL or UUID, whatever ...
+$resourceId = "/api/resource";
+
+// Connect to Throttr
 $service->connect();
 
+// Add limit to the registry
 $service->insert(
-    consumerId: '127.0.0.1',
-    resourceId: '/api/resource',
+    consumerId: $consumerId,
+    resourceId: $resourceId,
     ttl: 3000,
     ttlType: TTLType::MILLISECONDS,
     quota: 5,
     usage: 0
 );
 
+// Do you want to know if that was stored?
 $response = $service->query(
-    consumerId: '127.0.0.1',
-    resourceId: '/api/resource',
+    consumerId: $consumerId,
+    resourceId: $resourceId,
 );
 
 printf(
@@ -67,6 +77,29 @@ printf(
     (int)($response->ttlRemainingSeconds() * 1000)
 );
 
+// Do you want to update the quota?
+$service->update(
+    consumerId: $consumerId,
+    resourceId: $resourceId,
+    attribute: AttributeType::QUOTA,
+    change: ChangeType::DECREASE,
+    value: 1
+);
+
+// Do you want to know the new value?
+$response = $service->query(
+    consumerId: $consumerId,
+    resourceId: $resourceId,
+);
+
+printf(
+    "Allowed: %s, Remaining: %d, TTL: %dms\n",
+    $response->can() ? 'true' : 'false',
+    $response->quotaRemaining() ?? 0,
+    (int)($response->ttlRemainingSeconds() * 1000)
+);
+
+// Close the connections ...
 $service->close();
 ```
 
