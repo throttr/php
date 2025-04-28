@@ -1,7 +1,7 @@
 # Throttr PHP SDK
 
 <p align="center">
-<a href="https://github.com/throttr/php/actions/workflows/build.yml"><img src="https://github.com/throttr/throttr/actions/workflows/build.yml/badge.svg" alt="Build"></a>
+<a href="https://github.com/throttr/php/actions/workflows/build.yml"><img src="https://github.com/throttr/php/actions/workflows/build.yml/badge.svg" alt="Build"></a>
 <a href="https://codecov.io/gh/throttr/php"><img src="https://codecov.io/gh/throttr/php/graph/badge.svg?token=5TSHBIYUBI" alt="Coverage"></a>
 <a href="https://sonarcloud.io/project/overview?id=throttr_php"><img src="https://sonarcloud.io/api/project_badges/measure?project=throttr_php&metric=alert_status" alt="Quality Gate"></a>
 </p>
