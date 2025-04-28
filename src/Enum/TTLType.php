@@ -17,9 +17,23 @@
 
 namespace Throttr\SDK\Enum;
 
+/**
+ * TTL type
+ */
 enum TTLType: int
 {
+    /**
+     * Nanoseconds
+     */
     case NANOSECONDS = 0x00;
+
+    /**
+     * Milliseconds
+     */
     case MILLISECONDS = 0x01;
+
+    /**
+     * Seconds
+     */
     case SECONDS = 0x02;
 }

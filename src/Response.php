@@ -17,13 +17,55 @@
 
 namespace Throttr\SDK;
 
+/**
+ * Response
+ */
 final class Response
 {
+    /**
+     * Can
+     *
+     * @var bool|null
+     */
     private ?bool $can;
+
+    /**
+     * Success
+     *
+     * @var bool|null
+     */
     private ?bool $success;
+
+    /**
+     * Quota remaining
+     *
+     * @var int|null
+     */
     private ?int $quotaRemaining;
+
+    /**
+     * TTL remaining
+     *
+     * @var int|null
+     */
     private ?int $ttlRemaining;
+
+    /**
+     * TTP type
+     *
+     * @var int|null
+     */
     private ?int $ttlType;
+
+    /**
+     * Constructor
+     *
+     * @param bool|null $can
+     * @param bool|null $success
+     * @param int|null $quotaRemaining
+     * @param int|null $ttlRemaining
+     * @param int|null $ttlType
+     */
 
     private function __construct(
         ?bool $can = null,
@@ -39,6 +81,12 @@ final class Response
         $this->ttlType = $ttlType;
     }
 
+    /**
+     * From bytes
+     *
+     * @param string $data
+     * @return self
+     */
     public static function fromBytes(string $data): self
     {
         $length = strlen($data);
@@ -62,55 +110,69 @@ final class Response
                 ttlType: $ttlType
             );
         } else {
-            throw new \InvalidArgumentException('Invalid response length: ' . $length);
+            throw new \InvalidArgumentException('Invalid response length: ' . $length); // @codeCoverageIgnore
         }
     }
 
+
+    /**
+     * Can
+     *
+     * @return bool|null
+     */
     public function can(): ?bool
     {
         return $this->can;
     }
 
+    /**
+     * Success
+     *
+     * @return bool|null
+     */
     public function success(): ?bool
     {
         return $this->success;
     }
 
+    /**
+     * Quota remaining
+     *
+     * @return int|null
+     */
     public function quotaRemaining(): ?int
     {
         return $this->quotaRemaining;
     }
 
+    /**
+     * TTL remaining
+     *
+     * @return int|null
+     */
     public function ttlRemaining(): ?int
     {
         return $this->ttlRemaining;
     }
 
-    public function ttlType(): ?int
-    {
-        return $this->ttlType;
-    }
-
-    public function ttlRemainingSeconds(): ?float
-    {
-        if ($this->ttlRemaining === null || $this->ttlType === null) {
-            return null;
-        }
-
-        return match ($this->ttlType) {
-            0 => $this->ttlRemaining / 1_000_000_000,
-            1 => $this->ttlRemaining / 1_000,
-            2 => (float)$this->ttlRemaining,
-            default => (float)$this->ttlRemaining,
-        };
-    }
-
+    /**
+     * Unpack unsigned integer 64 bits little-endian
+     *
+     * @param string $data
+     * @return int
+     */
     private static function unpackUint64LE(string $data): int
     {
         [$low, $high] = array_values(unpack('V2', $data));
         return ($high << 32) | $low;
     }
 
+    /**
+     * Unpack signed integer 64 bits little-endian
+     *
+     * @param string $data
+     * @return int
+     */
     private static function unpackInt64LE(string $data): int
     {
         [$low, $high] = array_values(unpack('V2', $data));

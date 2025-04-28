@@ -17,9 +17,23 @@
 
 namespace Throttr\SDK\Enum;
 
+/**
+ * Change type
+ */
 enum ChangeType: int
 {
+    /**
+     * Patch
+     */
     case PATCH = 0x00;
+
+    /**
+     * Increase
+     */
     case INCREASE = 0x01;
+
+    /**
+     * Decrease
+     */
     case DECREASE = 0x02;
 }

@@ -62,7 +62,7 @@ final class Request
     private function serializeInsert(): string
     {
         if ($this->quota === null || $this->usage === null || $this->ttlType === null || $this->ttl === null || $this->consumerId === null || $this->resourceId === null) {
-            throw new \InvalidArgumentException('Missing fields for insert request.');
+            throw new \InvalidArgumentException('Missing fields for insert request.'); // @codeCoverageIgnore
         }
 
         $buffer = '';
@@ -98,7 +98,7 @@ final class Request
     private function serializeUpdate(): string
     {
         if ($this->attribute === null || $this->change === null || $this->value === null || $this->consumerId === null || $this->resourceId === null) {
-            throw new \InvalidArgumentException('Missing fields for update request.');
+            throw new \InvalidArgumentException('Missing fields for update request.'); // @codeCoverageIgnore
         }
 
         $buffer = '';

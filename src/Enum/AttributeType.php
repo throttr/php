@@ -17,8 +17,18 @@
 
 namespace Throttr\SDK\Enum;
 
+/**
+ * Attribute type
+ */
 enum AttributeType: int
 {
+    /**
+     * Quota
+     */
     case QUOTA = 0x00;
+
+    /**
+     * TTL
+     */
     case TTL = 0x01;
 }
