@@ -66,7 +66,7 @@ class Connection
         );
 
         if (!$this->socket) {
-            throw new RuntimeException("Failed to connect to {$address}: {$errstr} ({$errno})"); // @codeCoverageIgnore
+            throw new ConnectionException("Failed to connect to {$address}: {$errstr} ({$errno})"); // @codeCoverageIgnore
         }
 
         stream_set_timeout($this->socket, 5);

@@ -110,6 +110,7 @@ final class Request
      * @param int|null $value
      * @param string|null $consumerId
      * @param string|null $resourceId
+     * @SuppressWarnings("TooManyParameters")
      */
     public function __construct(
         RequestType $requestType,
