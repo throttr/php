@@ -1,4 +1,4 @@
-# Throttr PHP SDK
+# Throttr SDK for PHP
 
 <p align="center">
 <a href="https://github.com/throttr/php/actions/workflows/build.yml"><img src="https://github.com/throttr/php/actions/workflows/build.yml/badge.svg" alt="Build"></a>
@@ -24,7 +24,7 @@ php client for communicating with a Throttr server over TCP.
 
 The SDK enables sending traffic control requests efficiently, without HTTP, respecting the server's native binary protocol.
 
-## Installation
+## 🛠️ Installation
 
 Add the dependency using Composer:
 
