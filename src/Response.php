@@ -17,6 +17,10 @@
 
 namespace Throttr\SDK;
 
+use Throttr\SDK\Enum\TTLType;
+use Throttr\SDK\Enum\ValueSize;
+use Throttr\SDK\Requests\BaseRequest;
+
 /**
  * Response
  */
@@ -85,9 +89,10 @@ final class Response
      * From bytes
      *
      * @param string $data
+     * @param ValueSize $size
      * @return self
      */
-    public static function fromBytes(string $data): self
+    public static function fromBytes(string $data, ValueSize $size): self
     {
         $length = strlen($data);
 
@@ -95,22 +100,19 @@ final class Response
             // 1 byte response (Update/Purge)
             $success = (ord($data[0]) === 1);
             return new self(success: $success);
-        } elseif ($length === 18) {
-            // 18 bytes response (Insert/Query)
+        } else {
             $can = (ord($data[0]) === 1);
 
-            $quotaRemaining = self::unpackUint64LE(substr($data, 1, 8));
-            $ttlType = ord($data[9]);
-            $ttlRemaining = self::unpackInt64LE(substr($data, 10, 8));
+//            $quotaRemaining = unpack(BaseRequest::pack($size), substr($data, 1, $size->value));
+//            $ttlType = ord($data[$size->value + 1]);
+//            $ttlRemaining = unpack(BaseRequest::pack($size), substr($data, $size->value + 2, $size->value));
 
             return new self(
                 can: $can,
-                quotaRemaining: $quotaRemaining,
-                ttlRemaining: $ttlRemaining,
-                ttlType: $ttlType
+                quotaRemaining: 0,
+                ttlRemaining: 0,
+                ttlType: 0
             );
-        } else {
-            throw new \InvalidArgumentException('Invalid response length: ' . $length); // @codeCoverageIgnore
         }
     }
 

@@ -23,12 +23,12 @@ use Throttr\SDK\Enum\AttributeType;
 use Throttr\SDK\Enum\ChangeType;
 
 /**
- * Request
+ * BaseRequest
  */
 final class Request
 {
     /**
-     * Request type
+     * BaseRequest type
      *
      * @var RequestType
      */

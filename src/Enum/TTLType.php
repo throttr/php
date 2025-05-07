@@ -28,12 +28,27 @@ enum TTLType: int
     case NANOSECONDS = 0x00;
 
     /**
+     * Microseconds
+     */
+    case MICROSECONDS = 0x02;
+
+    /**
      * Milliseconds
      */
-    case MILLISECONDS = 0x01;
+    case MILLISECONDS = 0x03;
 
     /**
      * Seconds
      */
-    case SECONDS = 0x02;
+    case SECONDS = 0x04;
+
+    /**
+     * Minutes
+     */
+    case MINUTES = 0x05;
+
+    /**
+     * Hours
+     */
+    case HOURS = 0x06;
 }

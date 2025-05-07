@@ -22,7 +22,12 @@ use Throttr\SDK\Enum\TTLType;
 use Throttr\SDK\Enum\AttributeType;
 use Throttr\SDK\Enum\ChangeType;
 use RuntimeException;
+use Throttr\SDK\Enum\ValueSize;
 use Throttr\SDK\Exceptions\ServiceException;
+use Throttr\SDK\Requests\InsertRequest;
+use Throttr\SDK\Requests\PurgeRequest;
+use Throttr\SDK\Requests\QueryRequest;
+use Throttr\SDK\Requests\UpdateRequest;
 
 /**
  * Service
@@ -56,6 +61,13 @@ final class Service
     private int $port;
 
     /**
+     * Value size
+     *
+     * @var ValueSize
+     */
+    private ValueSize $size;
+
+    /**
      * Maximum connections
      *
      * @var int
@@ -67,9 +79,10 @@ final class Service
      *
      * @param string $host
      * @param int $port
+     * @param ValueSize $size
      * @param int $maxConnections
      */
-    public function __construct(string $host, int $port, int $maxConnections)
+    public function __construct(string $host, int $port, ValueSize $size, int $maxConnections)
     {
         if ($maxConnections <= 0) {
             throw new \InvalidArgumentException('maxConnections must be greater than 0.'); // @codeCoverageIgnore
@@ -77,6 +90,7 @@ final class Service
 
         $this->host = $host;
         $this->port = $port;
+        $this->size = $size;
         $this->maxConnections = $maxConnections;
     }
 
@@ -88,7 +102,7 @@ final class Service
     public function connect(): void
     {
         for ($i = 0; $i < $this->maxConnections; $i++) {
-            $connection = new Connection($this->host, $this->port);
+            $connection = new Connection($this->host, $this->port, $this->size);
             $this->connections[] = $connection;
         }
     }
@@ -110,96 +124,82 @@ final class Service
     /**
      * Insert
      *
-     * @param string $consumerId
-     * @param string $resourceId
+     * @param string $key
      * @param int $ttl
      * @param TTLType $ttlType
      * @param int $quota
-     * @param int $usage
      * @return Response
      */
-    public function insert(string $consumerId, string $resourceId, int $ttl, TTLType $ttlType, int $quota, int $usage = 0): Response
+    public function insert(string $key, int $ttl, TTLType $ttlType, int $quota): Response
     {
-        $request = new Request(
-            requestType: RequestType::INSERT,
+        $request = new InsertRequest(
+            key: $key,
             quota: $quota,
-            usage: $usage,
-            ttlType: $ttlType,
-            ttl: $ttl,
-            consumerId: $consumerId,
-            resourceId: $resourceId
+            ttl_type: $ttlType,
+            ttl: $ttl
         );
 
-        return $this->send($request);
+        return $this->send([$request])[0];
     }
 
     /**
      * Query
      *
-     * @param string $consumerId
-     * @param string $resourceId
+     * @param string $key
      * @return Response
      */
-    public function query(string $consumerId, string $resourceId): Response
+    public function query(string $key): Response
     {
-        $request = new Request(
-            requestType: RequestType::QUERY,
-            consumerId: $consumerId,
-            resourceId: $resourceId
+        $request = new QueryRequest(
+            key: $key,
         );
 
-        return $this->send($request);
+        return $this->send([$request])[0];
     }
 
     /**
      * Purge
      *
-     * @param string $consumerId
-     * @param string $resourceId
+     * @param string $key
      * @return Response
      */
-    public function purge(string $consumerId, string $resourceId): Response
+    public function purge(string $key): Response
     {
-        $request = new Request(
-            requestType: RequestType::PURGE,
-            consumerId: $consumerId,
-            resourceId: $resourceId
+        $request = new PurgeRequest(
+            key: $key
         );
 
-        return $this->send($request);
+        return $this->send([$request])[0];
     }
 
     /**
      * Update
      *
-     * @param string $consumerId
-     * @param string $resourceId
+     * @param string $key
      * @param AttributeType $attribute
      * @param ChangeType $change
      * @param int $value
      * @return Response
      */
-    public function update(string $consumerId, string $resourceId, AttributeType $attribute, ChangeType $change, int $value): Response
+    public function update(string $key, AttributeType $attribute, ChangeType $change, int $value): Response
     {
-        $request = new Request(
-            requestType: RequestType::UPDATE,
+        $request = new UpdateRequest(
             attribute: $attribute,
             change: $change,
             value: $value,
-            consumerId: $consumerId,
-            resourceId: $resourceId
+            key: $key,
         );
 
-        return $this->send($request);
+        return $this->send([$request])[0];
     }
 
     /**
      * Send
      *
-     * @param Request $request
-     * @return Response
+     * @param Request|array $requests
+     * @return Response|array
      */
-    private function send(Request $request): Response
+    public function send(Request|array $requests): Response|array
     {
         if (empty($this->connections)) {
             throw new ServiceException('No available connections.'); // @codeCoverageIgnore
@@ -210,6 +210,6 @@ final class Service
 
         $connection = $this->connections[$index];
 
-        return $connection->send($request);
+        return $connection->send($requests);
     }
 }

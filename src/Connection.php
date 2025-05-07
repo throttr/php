@@ -19,8 +19,10 @@ namespace Throttr\SDK;
 
 use RuntimeException;
 use SplQueue;
+use Throttr\SDK\Enum\ValueSize;
 use Throttr\SDK\Exceptions\ConnectionException;
 use Throttr\SDK\Exceptions\ProtocolException;
+use Throttr\SDK\Requests\BaseRequest;
 
 /**
  * Connection
@@ -49,13 +51,23 @@ class Connection
     private bool $busy = false;
 
     /**
+     * Value size
+     *
+     * @var ValueSize
+     */
+    private ValueSize $size;
+
+    /**
      * Constructor
      *
      * @param string $host
      * @param int    $port
+     * @param ValueSize    $size
      */
-    public function __construct(string $host, int $port)
+    public function __construct(string $host, int $port, ValueSize $size)
     {
+        $this->size = $size;
+
         $address = "tcp://{$host}:{$port}";
         $this->socket = @stream_socket_client(
             $address,
@@ -77,13 +89,25 @@ class Connection
     /**
      * Send request
      *
-     * @param Request $request
-     * @return Response
+     * @param BaseRequest|array $requests
+     * @return array
      */
-    public function send(Request $request): Response
+    public function send(BaseRequest|array $requests): array
     {
-        $buffer = $request->toBytes();
-        $pending = new PendingRequest($buffer);
+        $buffer = '';
+        $operations = [];
+        if (is_array($requests)) {
+            /** @var BaseRequest $request */
+            foreach ($requests as $request) {
+                $buffer .= $request->toBytes($this->size);
+                $operations[] = $request->type;
+            }
+        } else {
+            $buffer = $requests->toBytes($this->size);
+        }
+
+
+        $pending = new PendingWrite($buffer, $operations);
 
         $this->queue->enqueue($pending);
 
@@ -93,15 +117,15 @@ class Connection
     /**
      * Process queue
      *
-     * @return Response
+     * @return array
      */
-    private function processQueue(): Response
+    private function processQueue(): array
     {
         if ($this->busy || $this->queue->isEmpty()) {
             throw new ConnectionException('No request to process or connection is busy.'); // @codeCoverageIgnore
         }
 
-        /** @var PendingRequest $pending */
+        /** @var PendingWrite $pending */
         $pending = $this->queue->dequeue();
 
         $this->busy = true;
@@ -112,24 +136,46 @@ class Connection
                 throw new ConnectionException('Failed to write complete data to socket.'); // @codeCoverageIgnore
             }
 
-            $firstByteRequestType = ord($pending->buffer()[0]);
+            $responseBytes = fread($this->socket, count($pending->operations));
 
-            $responseLength = match ($firstByteRequestType) {
-                0x01, // Insert
-                0x02  // Query
-                => 18,
-                0x03, // Update
-                0x04  // Purge
-                => 1,
-                default => throw new ProtocolException('Unknown request type: ' . $firstByteRequestType), // @codeCoverageIgnore
-            };
-
-            $responseBytes = fread($this->socket, $responseLength);
-            if ($responseBytes === false || strlen($responseBytes) !== $responseLength) {
+            if ($responseBytes === false) {
                 throw new ConnectionException('Failed to read full response payload.'); // @codeCoverageIgnore
             }
 
-            return Response::fromBytes($responseBytes);
+            $responses = [];
+
+            $offset = 0;
+
+            foreach ($pending->operations as $operation) {
+                switch ($operation) {
+                    case 0x01:
+                    case 0x02:
+                    case 0x04:
+                        $responses[] = Response::fromBytes($responseBytes[$offset], $this->size);
+                        break;
+                    case 0x03:
+                        if ($responseBytes[$offset] == 0x00) {
+                            $responses[] = Response::fromBytes($responseBytes[$offset], $this->size);
+                        } else {
+                            $pendingBufferLength = $this->size->value * 2 + 1;
+
+                            $scopeBytes = fread($this->socket, $pendingBufferLength);
+
+                            if ($scopeBytes === false) {
+                                throw new ConnectionException('Failed to read full response payload.'); // @codeCoverageIgnore
+                            }
+
+                            $responseBytes .= $scopeBytes;
+                            $responses[] = Response::fromBytes(substr($responseBytes, $offset, $pendingBufferLength + 1), $this->size);
+                            $offset += $pendingBufferLength;
+                        }
+                        break;
+                }
+
+                $offset++;
+            }
+
+            return $responses;
         } finally {
             $this->busy = false;
         }
