@@ -73,7 +73,7 @@ $response = $service->query(
 printf(
     "Allowed: %s, Remaining: %d, TTL: %dms\n",
     $response->can() ? 'true' : 'false',
-    $response->quotaRemaining() ?? 0,
+    $response->quota() ?? 0,
     (int)($response->ttlRemainingSeconds() * 1000)
 );
 
@@ -95,7 +95,7 @@ $response = $service->query(
 printf(
     "Allowed: %s, Remaining: %d, TTL: %dms\n",
     $response->can() ? 'true' : 'false',
-    $response->quotaRemaining() ?? 0,
+    $response->quota() ?? 0,
     (int)($response->ttlRemainingSeconds() * 1000)
 );
 

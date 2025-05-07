@@ -75,20 +75,18 @@ final class ServiceTest extends TestCase
         );
 
         $this->assertTrue($queryResponse->success(), 'Query should be successful');
-        $this->assertGreaterThanOrEqual(0, $queryResponse->quotaRemaining(), 'Quota should be non-negative');
-        $this->assertGreaterThanOrEqual(0, $queryResponse->ttlRemaining(), 'TTL should be non-negative');
-        $this->assertLessThanOrEqual(3, $queryResponse->ttlRemaining(), 'TTL should be less than 3 seconds');
+        $this->assertGreaterThanOrEqual(0, $queryResponse->quota(), 'Quota should be non-negative');
+        $this->assertGreaterThanOrEqual(0, $queryResponse->ttl(), 'TTL should be non-negative');
+        $this->assertLessThanOrEqual(3, $queryResponse->ttl(), 'TTL should be less than 3 seconds');
+
+
+        $purgeResponse = $this->service->purge(
+            key: $key,
+        );
+
+        $this->assertTrue($purgeResponse->success(), 'Purge should be successful');
     }
 
-//    public function testBatching()
-//    {
-//
-//        $response = $this->service->send([
-//            new \Throttr\SDK\Requests\InsertRequest("abc", 60, TTLType::SECONDS, 60),
-//        ]);
-//        var_dump($response);
-//
-//    }
 
     /**
      * Update and purge
@@ -97,30 +95,30 @@ final class ServiceTest extends TestCase
      */
     public function testUpdate(): void
     {
-//        $key = 'someone';
-//
-//        $insertResponse = $this->service->insert(
-//            key: $key,
-//            ttl: 3,
-//            ttlType: TTLType::SECONDS,
-//            quota: 10,
-//        );
-//
-//        $this->assertTrue($insertResponse->success(), 'Insert should be successful');
-//
-//        $updateResponse = $this->service->update(
-//            key: $key,
-//            attribute: AttributeType::QUOTA,
-//            change: ChangeType::INCREASE,
-//            value: 5
-//        );
-//
-//        $this->assertTrue($updateResponse->success(), 'Update should be successful');
-//
-//        $purgeResponse = $this->service->purge(
-//            key: $key,
-//        );
-//
-//        $this->assertTrue($purgeResponse->success(), 'Purge should be successful');
+        $key = 'someone';
+
+        $insertResponse = $this->service->insert(
+            key: $key,
+            ttl: 3,
+            ttlType: TTLType::SECONDS,
+            quota: 10,
+        );
+
+        $this->assertTrue($insertResponse->success(), 'Insert should be successful');
+
+        $updateResponse = $this->service->update(
+            key: $key,
+            attribute: AttributeType::QUOTA,
+            change: ChangeType::INCREASE,
+            value: 5
+        );
+
+        $this->assertTrue($updateResponse->success(), 'Update should be successful');
+
+        $purgeResponse = $this->service->purge(
+            key: $key,
+        );
+
+        $this->assertTrue($purgeResponse->success(), 'Purge should be successful');
     }
 }

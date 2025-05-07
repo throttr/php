@@ -160,8 +160,7 @@ class Connection
                         } else {
                             $pendingBufferLength = $this->size->value * 2 + 1;
 
-
-                            $scopeBytes = fread($this->socket, $pendingBufferLength - 1);
+                            $scopeBytes = fread($this->socket, $pendingBufferLength);
 
                             if ($scopeBytes === false) {
                                 throw new ConnectionException('Failed to read full response payload 2.'); // @codeCoverageIgnore
