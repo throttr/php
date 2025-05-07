@@ -97,7 +97,6 @@ final class Response
         $length = strlen($data);
 
         if ($length === 1) {
-            // 1 byte response (Update/Purge)
             $success = (ord($data[0]) === 1);
             return new self(success: $success);
         } else {
@@ -108,7 +107,7 @@ final class Response
 //            $ttlRemaining = unpack(BaseRequest::pack($size), substr($data, $size->value + 2, $size->value));
 
             return new self(
-                can: $can,
+                success: $can,
                 quotaRemaining: 0,
                 ttlRemaining: 0,
                 ttlType: 0

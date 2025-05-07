@@ -139,33 +139,36 @@ class Connection
             $responseBytes = fread($this->socket, count($pending->operations));
 
             if ($responseBytes === false) {
-                throw new ConnectionException('Failed to read full response payload.'); // @codeCoverageIgnore
+                throw new ConnectionException('Failed to read full response payload 1.'); // @codeCoverageIgnore
             }
 
             $responses = [];
+
 
             $offset = 0;
 
             foreach ($pending->operations as $operation) {
                 switch ($operation) {
                     case 0x01:
-                    case 0x02:
+                    case 0x03:
                     case 0x04:
                         $responses[] = Response::fromBytes($responseBytes[$offset], $this->size);
                         break;
-                    case 0x03:
+                    case 0x02:
                         if ($responseBytes[$offset] == 0x00) {
                             $responses[] = Response::fromBytes($responseBytes[$offset], $this->size);
                         } else {
                             $pendingBufferLength = $this->size->value * 2 + 1;
 
-                            $scopeBytes = fread($this->socket, $pendingBufferLength);
+
+                            $scopeBytes = fread($this->socket, $pendingBufferLength - 1);
 
                             if ($scopeBytes === false) {
-                                throw new ConnectionException('Failed to read full response payload.'); // @codeCoverageIgnore
+                                throw new ConnectionException('Failed to read full response payload 2.'); // @codeCoverageIgnore
                             }
 
                             $responseBytes .= $scopeBytes;
+
                             $responses[] = Response::fromBytes(substr($responseBytes, $offset, $pendingBufferLength + 1), $this->size);
                             $offset += $pendingBufferLength;
                         }
