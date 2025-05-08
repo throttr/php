@@ -38,7 +38,17 @@ final class ServiceTest extends TestCase
      */
     protected function setUp(): void
     {
-        $this->service = new Service('127.0.0.1', 9000, ValueSize::UINT16, 1);
+        $size = getenv('THROTTR_SIZE') ?: 'uint16';
+
+        $valueSize = match ($size) {
+            'uint8' => ValueSize::UINT8,
+            'uint16' => ValueSize::UINT16,
+            'uint32' => ValueSize::UINT32,
+            'uint64' => ValueSize::UINT64,
+            default => throw new \InvalidArgumentException("Unsupported THROTTR_SIZE: $size"),
+        };
+
+        $this->service = new Service('127.0.0.1', 9000, $valueSize, 1);
         $this->service->connect();
     }
 
