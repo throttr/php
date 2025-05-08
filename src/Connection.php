@@ -83,6 +83,9 @@ class Connection
 
         stream_set_timeout($this->socket, 5);
 
+        $rawSocket = @socket_import_stream($this->socket);
+        @socket_set_option($rawSocket, SOL_TCP, TCP_NODELAY, 1);
+
         $this->queue = new SplQueue();
     }
 
@@ -155,7 +158,8 @@ class Connection
                         $responses[] = Response::fromBytes($responseBytes[$offset], $this->size);
                         break;
                     case 0x02:
-                        if ($responseBytes[$offset] == 0x00) {
+
+                        if (ord($responseBytes[$offset]) == 0x00) {
                             $responses[] = Response::fromBytes($responseBytes[$offset], $this->size);
                         } else {
                             $pendingBufferLength = $this->size->value * 2 + 1;

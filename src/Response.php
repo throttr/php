@@ -17,6 +17,7 @@
 
 namespace Throttr\SDK;
 
+use Throttr\SDK\Enum\TTLType;
 use Throttr\SDK\Enum\ValueSize;
 use Throttr\SDK\Requests\BaseRequest;
 
@@ -142,10 +143,10 @@ final class Response
     /**
      * TTL type
      *
-     * @return int|null
+     * @return TTLType|null
      */
-    public function ttlType(): ?int
+    public function ttlType(): ?TTLType
     {
-        return $this->ttlType;
+        return $this->ttlType !== null ? TTLType::from($this->ttlType) : null;
     }
 }

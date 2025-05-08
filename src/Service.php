@@ -24,6 +24,7 @@ use Throttr\SDK\Enum\ChangeType;
 use RuntimeException;
 use Throttr\SDK\Enum\ValueSize;
 use Throttr\SDK\Exceptions\ServiceException;
+use Throttr\SDK\Requests\BaseRequest;
 use Throttr\SDK\Requests\InsertRequest;
 use Throttr\SDK\Requests\PurgeRequest;
 use Throttr\SDK\Requests\QueryRequest;
@@ -196,10 +197,10 @@ final class Service
     /**
      * Send
      *
-     * @param Request|array $requests
+     * @param BaseRequest|array $requests
      * @return Response|array
      */
-    public function send(Request|array $requests): Response|array
+    public function send(BaseRequest|array $requests): Response|array
     {
         if (empty($this->connections)) {
             throw new ServiceException('No available connections.'); // @codeCoverageIgnore
