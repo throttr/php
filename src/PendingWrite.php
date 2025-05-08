@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php
 
 // Copyright (C) 2025 Ian Torres
 //
@@ -15,30 +15,30 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-namespace Throttr\SDK\Enum;
+namespace Throttr\SDK;
 
 /**
- * BaseRequest type
+ * Pending request
  */
-enum RequestType: int
+class PendingWrite
 {
     /**
-     * Insert
+     * Constructor
+     *
+     * @param string $buffer
+     * @param array $operations
      */
-    case INSERT = 0x01;
+    public function __construct(public string $buffer, public array $operations)
+    {
+    }
 
     /**
-     * Query
+     * Buffer
+     *
+     * @return string
      */
-    case QUERY = 0x02;
-
-    /**
-     * Update
-     */
-    case UPDATE = 0x03;
-
-    /**
-     * Purge
-     */
-    case PURGE = 0x04;
+    public function buffer(): string
+    {
+        return $this->buffer;
+    }
 }

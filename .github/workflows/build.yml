@@ -6,9 +6,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        size: [uint8, uint16, uint32, uint64]
+
     services:
       throttr:
-        image: ghcr.io/throttr/throttr:2.1.0-release
+        image: ghcr.io/throttr/throttr:4.0.9-debug-${{ matrix.size }}
         ports:
           - 9000:9000
 
@@ -39,8 +43,11 @@ jobs:
           nc -z localhost 9000 || (echo "❌ throttr isn't running on port 9000" && exit 1)
           
           vendor/bin/phpunit --coverage-text --coverage-clover=coverage.xml
+        env:
+          THROTTR_SIZE: ${{ matrix.size }}
 
       - name: Upload coverage reports to Codecov
+        if: ${{ matrix.size == 'uint16' }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

@@ -15,11 +15,14 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+namespace Throttr\tests;
+
 use PHPUnit\Framework\TestCase;
-use Throttr\SDK\Service;
-use Throttr\SDK\Enum\TTLType;
 use Throttr\SDK\Enum\AttributeType;
 use Throttr\SDK\Enum\ChangeType;
+use Throttr\SDK\Enum\TTLType;
+use Throttr\SDK\Enum\ValueSize;
+use Throttr\SDK\Service;
 
 /**
  * @internal
@@ -35,7 +38,17 @@ final class ServiceTest extends TestCase
      */
     protected function setUp(): void
     {
-        $this->service = new Service('127.0.0.1', 9000, 1);
+        $size = getenv('THROTTR_SIZE') ?: 'uint16';
+
+        $valueSize = match ($size) {
+            'uint8' => ValueSize::UINT8,
+            'uint16' => ValueSize::UINT16,
+            'uint32' => ValueSize::UINT32,
+            'uint64' => ValueSize::UINT64,
+            default => throw new \InvalidArgumentException("Unsupported THROTTR_SIZE: $size"),
+        };
+
+        $this->service = new Service('127.0.0.1', 9000, $valueSize, 1);
         $this->service->connect();
     }
 
@@ -54,32 +67,90 @@ final class ServiceTest extends TestCase
      *
      * @return void
      */
-    public function testInsertAndQuery(): void
+    public function testCompatibilityWithThrottrServer(): void
     {
-        $consumerId = '127.0.0.1:33';
-        $resourceId = 'GET /api';
+        $key = '333333';
 
-        $insertResponse = $this->service->insert(
-            consumerId: $consumerId,
-            resourceId: $resourceId,
-            ttl: 3,
+        sleep(1);
+
+        $insert = $this->service->insert(
+            key: $key,
+            ttl: 60,
             ttlType: TTLType::SECONDS,
-            quota: 10,
-            usage: 0
+            quota: 7
         );
 
-        $this->assertTrue($insertResponse->can(), 'Insert should be successful');
+        $this->assertIsBool($insert->success());
+        $this->assertTrue($insert->success(), 'Insert should be successful');
 
-        $queryResponse = $this->service->query(
-            consumerId: $consumerId,
-            resourceId: $resourceId
-        );
+        $firstQuery = $this->service->query($key);
+        $this->assertTrue($firstQuery->success());
+        $this->assertEquals(7, $firstQuery->quota());
+        $this->assertEquals(TTLType::SECONDS, $firstQuery->ttlType());
+        $this->assertGreaterThan(0, $firstQuery->ttl());
+        $this->assertLessThan(60, $firstQuery->ttl());
 
-        $this->assertTrue($queryResponse->can(), 'Query should be successful');
-        $this->assertGreaterThanOrEqual(0, $queryResponse->quotaRemaining(), 'Quota should be non-negative');
-        $this->assertGreaterThanOrEqual(0, $queryResponse->ttlRemaining(), 'TTL should be non-negative');
-        $this->assertLessThanOrEqual(3, $queryResponse->ttlRemaining(), 'TTL should be less than 3 seconds');
+        $update1 = $this->service->update($key, AttributeType::QUOTA, ChangeType::DECREASE, 7);
+        $this->assertTrue($update1->success());
+
+        $update2 = $this->service->update($key, AttributeType::QUOTA, ChangeType::DECREASE, 7);
+        $this->assertFalse($update2->success());
+
+        $queryAfterDecrease = $this->service->query($key);
+        $this->assertTrue($queryAfterDecrease->success());
+        $this->assertEquals(0, $queryAfterDecrease->quota());
+        $this->assertEquals(TTLType::SECONDS, $queryAfterDecrease->ttlType());
+        $this->assertGreaterThan(0, $queryAfterDecrease->ttl());
+        $this->assertLessThan(60, $queryAfterDecrease->ttl());
+
+        $patch = $this->service->update($key, AttributeType::QUOTA, ChangeType::PATCH, 10);
+        $this->assertTrue($patch->success());
+
+        $queryAfterPatch = $this->service->query($key);
+        $this->assertTrue($queryAfterPatch->success());
+        $this->assertEquals(10, $queryAfterPatch->quota());
+
+        $increase = $this->service->update($key, AttributeType::QUOTA, ChangeType::INCREASE, 20);
+        $this->assertTrue($increase->success());
+
+        $queryAfterIncrease = $this->service->query($key);
+        $this->assertTrue($queryAfterIncrease->success());
+        $this->assertEquals(30, $queryAfterIncrease->quota());
+
+        $ttlIncrease = $this->service->update($key, AttributeType::TTL, ChangeType::INCREASE, 60);
+        $this->assertTrue($ttlIncrease->success());
+
+        $queryAfterTtlIncrease = $this->service->query($key);
+        $this->assertTrue($queryAfterTtlIncrease->success());
+        $this->assertGreaterThan(60, $queryAfterTtlIncrease->ttl());
+        $this->assertLessThan(120, $queryAfterTtlIncrease->ttl());
+
+        $ttlDecrease = $this->service->update($key, AttributeType::TTL, ChangeType::DECREASE, 60);
+        $this->assertTrue($ttlDecrease->success());
+
+        $queryAfterTtlDecrease = $this->service->query($key);
+        $this->assertTrue($queryAfterTtlDecrease->success());
+        $this->assertGreaterThan(0, $queryAfterTtlDecrease->ttl());
+        $this->assertLessThan(60, $queryAfterTtlDecrease->ttl());
+
+        $ttlPatch = $this->service->update($key, AttributeType::TTL, ChangeType::PATCH, 90);
+        $this->assertTrue($ttlPatch->success());
+
+        $queryAfterTtlPatch = $this->service->query($key);
+        $this->assertTrue($queryAfterTtlPatch->success());
+        $this->assertGreaterThan(60, $queryAfterTtlPatch->ttl());
+        $this->assertLessThan(90, $queryAfterTtlPatch->ttl());
+
+        $purge = $this->service->purge($key);
+        $this->assertTrue($purge->success());
+
+        $purgeAgain = $this->service->purge($key);
+        $this->assertFalse($purgeAgain->success());
+
+        $queryFinal = $this->service->query($key);
+        $this->assertFalse($queryFinal->success());
     }
+
 
     /**
      * Update and purge
@@ -88,23 +159,19 @@ final class ServiceTest extends TestCase
      */
     public function testUpdate(): void
     {
-        $consumerId = 'someone';
-        $resourceId = '/updatable';
+        $key = 'someone';
 
         $insertResponse = $this->service->insert(
-            consumerId: $consumerId,
-            resourceId: $resourceId,
+            key: $key,
             ttl: 3,
             ttlType: TTLType::SECONDS,
             quota: 10,
-            usage: 0
         );
 
-        $this->assertTrue($insertResponse->can(), 'Insert should be successful');
+        $this->assertTrue($insertResponse->success(), 'Insert should be successful');
 
         $updateResponse = $this->service->update(
-            consumerId: $consumerId,
-            resourceId: $resourceId,
+            key: $key,
             attribute: AttributeType::QUOTA,
             change: ChangeType::INCREASE,
             value: 5
@@ -113,8 +180,7 @@ final class ServiceTest extends TestCase
         $this->assertTrue($updateResponse->success(), 'Update should be successful');
 
         $purgeResponse = $this->service->purge(
-            consumerId: $consumerId,
-            resourceId: $resourceId
+            key: $key,
         );
 
         $this->assertTrue($purgeResponse->success(), 'Purge should be successful');

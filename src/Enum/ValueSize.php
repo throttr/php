@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 // Copyright (C) 2025 Ian Torres
 //
@@ -15,37 +15,30 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-namespace Throttr\SDK;
+namespace Throttr\SDK\Enum;
 
 /**
- * Pending request
+ * Value size
  */
-class PendingRequest
+enum ValueSize: int
 {
     /**
-     * Buffer
-     *
-     * @var string
+     * Unsigned integer of 8 bits
      */
-    private string $buffer;
+    case UINT8 = 1;
 
     /**
-     * Constructor
-     *
-     * @param string $buffer
+     * Unsigned integer of 16 bits
      */
-    public function __construct(string $buffer)
-    {
-        $this->buffer = $buffer;
-    }
+    case UINT16 = 2;
 
     /**
-     * Buffer
-     *
-     * @return string
+     * Unsigned integer of 32 bits
      */
-    public function buffer(): string
-    {
-        return $this->buffer;
-    }
+    case UINT32 = 4;
+
+    /**
+     * Unsigned integer of 64 bits
+     */
+    case UINT64 = 8;
 }

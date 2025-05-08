@@ -17,18 +17,15 @@
 
 namespace Throttr\SDK;
 
+use Throttr\SDK\Enum\TTLType;
+use Throttr\SDK\Enum\ValueSize;
+use Throttr\SDK\Requests\BaseRequest;
+
 /**
  * Response
  */
 final class Response
 {
-    /**
-     * Can
-     *
-     * @var bool|null
-     */
-    private ?bool $can;
-
     /**
      * Success
      *
@@ -37,18 +34,18 @@ final class Response
     private ?bool $success;
 
     /**
-     * Quota remaining
+     * Quota
      *
      * @var int|null
      */
-    private ?int $quotaRemaining;
+    private ?int $quota;
 
     /**
-     * TTL remaining
+     * TTL
      *
      * @var int|null
      */
-    private ?int $ttlRemaining;
+    private ?int $ttl;
 
     /**
      * TTP type
@@ -60,24 +57,21 @@ final class Response
     /**
      * Constructor
      *
-     * @param bool|null $can
      * @param bool|null $success
-     * @param int|null $quotaRemaining
-     * @param int|null $ttlRemaining
+     * @param int|null $quota
+     * @param int|null $ttl
      * @param int|null $ttlType
      */
 
     private function __construct(
-        ?bool $can = null,
         ?bool $success = null,
-        ?int $quotaRemaining = null,
-        ?int $ttlRemaining = null,
-        ?int $ttlType = null
+        ?int  $quota = null,
+        ?int  $ttl = null,
+        ?int  $ttlType = null
     ) {
-        $this->can = $can;
         $this->success = $success;
-        $this->quotaRemaining = $quotaRemaining;
-        $this->ttlRemaining = $ttlRemaining;
+        $this->quota = $quota;
+        $this->ttl = $ttl;
         $this->ttlType = $ttlType;
     }
 
@@ -85,44 +79,33 @@ final class Response
      * From bytes
      *
      * @param string $data
+     * @param ValueSize $size
      * @return self
      */
-    public static function fromBytes(string $data): self
+    public static function fromBytes(string $data, ValueSize $size): self
     {
         $length = strlen($data);
 
+        $success = (ord($data[0]) === 1);
         if ($length === 1) {
-            // 1 byte response (Update/Purge)
-            $success = (ord($data[0]) === 1);
             return new self(success: $success);
-        } elseif ($length === 18) {
-            // 18 bytes response (Insert/Query)
-            $can = (ord($data[0]) === 1);
+        } else {
+            $valueSize = $size->value;
+            $quota = unpack(BaseRequest::pack($size), substr($data, 1, $valueSize))[1];
 
-            $quotaRemaining = self::unpackUint64LE(substr($data, 1, 8));
-            $ttlType = ord($data[9]);
-            $ttlRemaining = self::unpackInt64LE(substr($data, 10, 8));
+            $ttlTypeOffset = 1 + $valueSize;
+            $ttlType = ord($data[$ttlTypeOffset]);
+
+            $ttlOffset = $ttlTypeOffset + 1;
+            $ttl = unpack(BaseRequest::pack($size), substr($data, $ttlOffset, $valueSize))[1];
 
             return new self(
-                can: $can,
-                quotaRemaining: $quotaRemaining,
-                ttlRemaining: $ttlRemaining,
+                success: $success,
+                quota: $quota,
+                ttl: $ttl,
                 ttlType: $ttlType
             );
-        } else {
-            throw new \InvalidArgumentException('Invalid response length: ' . $length); // @codeCoverageIgnore
         }
-    }
-
-
-    /**
-     * Can
-     *
-     * @return bool|null
-     */
-    public function can(): ?bool
-    {
-        return $this->can;
     }
 
     /**
@@ -136,52 +119,34 @@ final class Response
     }
 
     /**
-     * Quota remaining
+     * Quota
      *
      * @return int|null
      */
-    public function quotaRemaining(): ?int
+    public function quota(): ?int
     {
-        return $this->quotaRemaining;
+        return $this->quota;
     }
 
     /**
-     * TTL remaining
+     * TTL
      *
      * @return int|null
      */
-    public function ttlRemaining(): ?int
+    public function ttl(): ?int
     {
-        return $this->ttlRemaining;
+        return $this->ttl;
     }
 
-    /**
-     * Unpack unsigned integer 64 bits little-endian
-     *
-     * @param string $data
-     * @return int
-     */
-    private static function unpackUint64LE(string $data): int
-    {
-        [$low, $high] = array_values(unpack('V2', $data));
-        return ($high << 32) | $low;
-    }
+
 
     /**
-     * Unpack signed integer 64 bits little-endian
+     * TTL type
      *
-     * @param string $data
-     * @return int
+     * @return TTLType|null
      */
-    private static function unpackInt64LE(string $data): int
+    public function ttlType(): ?TTLType
     {
-        [$low, $high] = array_values(unpack('V2', $data));
-        $value = ($high << 32) | $low;
-
-        if ($high & 0x80000000) {
-            $value -= (1 << 64); // @codeCoverageIgnore
-        }
-
-        return $value;
+        return $this->ttlType !== null ? TTLType::from($this->ttlType) : null;
     }
 }

@@ -41,65 +41,56 @@ require 'vendor/autoload.php';
 
 use Throttr\SDK\Service;
 use Throttr\SDK\Enum\TTLType;
+use Throttr\SDK\Enum\AttributeType;
+use Throttr\SDK\Enum\ChangeType;
+use Throttr\SDK\Enum\ValueSize;
 
-// Configure your instance with 4 connections ...
-$service = new Service('127.0.0.1', 9000, 4);
+// Configure your instance with 4 connections and a value size (e.g. UINT16)
+$service = new Service('127.0.0.1', 9000, ValueSize::UINT16, 4);
 
-// Define a consumer ... it can be an IP and port or UUID, whatever ...
-$consumerId = "127.0.0.1";
-
-// Define the resource ... it can be a METHOD + URL or UUID, whatever ...
-$resourceId = "/api/resource";
+// Define the key ... it can be an IP+port, UUID, route, etc.
+$key = '127.0.0.1:/api/resource';
 
 // Connect to Throttr
 $service->connect();
 
-// Add limit to the registry
+// Insert a rule for this key
 $service->insert(
-    consumerId: $consumerId,
-    resourceId: $resourceId,
+    key: $key,
     ttl: 3000,
     ttlType: TTLType::MILLISECONDS,
-    quota: 5,
-    usage: 0
+    quota: 5
 );
 
-// Do you want to know if that was stored?
-$response = $service->query(
-    consumerId: $consumerId,
-    resourceId: $resourceId,
-);
+// Query the current state
+$response = $service->query($key);
 
 printf(
     "Allowed: %s, Remaining: %d, TTL: %dms\n",
-    $response->can() ? 'true' : 'false',
-    $response->quotaRemaining() ?? 0,
-    (int)($response->ttlRemainingSeconds() * 1000)
+    $response->success() ? 'true' : 'false',
+    $response->quota() ?? 0,
+    (int)($response->ttl() ?? 0)
 );
 
-// Do you want to update the quota?
+// Update the quota (consume 1)
 $service->update(
-    consumerId: $consumerId,
-    resourceId: $resourceId,
+    key: $key,
     attribute: AttributeType::QUOTA,
     change: ChangeType::DECREASE,
     value: 1
 );
 
-// Do you want to know the new value?
-$response = $service->query(
-    consumerId: $consumerId,
-    resourceId: $resourceId,
-);
+// Query again
+$response = $service->query($key);
 
 printf(
     "Allowed: %s, Remaining: %d, TTL: %dms\n",
-    $response->can() ? 'true' : 'false',
-    $response->quotaRemaining() ?? 0,
-    (int)($response->ttlRemainingSeconds() * 1000)
+    $response->success() ? 'true' : 'false',
+    $response->quota() ?? 0,
+    (int)($response->ttl() ?? 0)
 );
 
-// Close the connections ...
+// Close connections
 $service->close();
 ```
 
