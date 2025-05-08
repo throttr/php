@@ -25,7 +25,7 @@ enum TTLType: int
     /**
      * Nanoseconds
      */
-    case NANOSECONDS = 0x00;
+    case NANOSECONDS = 0x01;
 
     /**
      * Microseconds
