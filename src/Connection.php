@@ -20,6 +20,7 @@ namespace Throttr\SDK;
 use SplQueue;
 use Throttr\SDK\Enum\ValueSize;
 use Throttr\SDK\Exceptions\ConnectionException;
+use Throttr\SDK\Exceptions\ProtocolException;
 use Throttr\SDK\Requests\BaseRequest;
 
 /**
@@ -134,51 +135,82 @@ class Connection
             }
 
             $responseBytes = fread($this->socket, count($pending->operations));
-
             if ($responseBytes === false) {
-                throw new ConnectionException('Failed to read full response payload 1.'); // @codeCoverageIgnore
+                throw new ConnectionException('Failed to read response payload.'); // @codeCoverageIgnore
             }
 
-            $responses = [];
-
-
-            $offset = 0;
-
-            foreach ($pending->operations as $operation) {
-                switch ($operation) {
-                    case 0x01:
-                    case 0x03:
-                    case 0x04:
-                        $responses[] = Response::fromBytes($responseBytes[$offset], $this->size);
-                        break;
-                    case 0x02:
-
-                        if (ord($responseBytes[$offset]) == 0x00) {
-                            $responses[] = Response::fromBytes($responseBytes[$offset], $this->size);
-                        } else {
-                            $pendingBufferLength = $this->size->value * 2 + 1;
-
-                            $scopeBytes = fread($this->socket, $pendingBufferLength);
-
-                            if ($scopeBytes === false) {
-                                throw new ConnectionException('Failed to read full response payload 2.'); // @codeCoverageIgnore
-                            }
-
-                            $responseBytes .= $scopeBytes;
-
-                            $responses[] = Response::fromBytes(substr($responseBytes, $offset, $pendingBufferLength + 1), $this->size);
-                            $offset += $pendingBufferLength;
-                        }
-                        break;
-                }
-
-                $offset++;
-            }
-
-            return $responses;
+            return $this->processResponses($pending, $responseBytes);
         } finally {
             $this->busy = false;
         }
+    }
+
+    /**
+     * Process responses
+     *
+     * @param PendingWrite $pending
+     * @param string $responseBytes
+     * @return array
+     */
+    private function processResponses(PendingWrite $pending, string $responseBytes): array
+    {
+        $responses = [];
+        $offset = 0;
+
+        foreach ($pending->operations as $operation) {
+            $responses[] = match ($operation) {
+                0x01, 0x03, 0x04 => $this->handleSimpleResponse($responseBytes, $offset),
+                0x02 => $this->handleFullResponse($responseBytes, $offset),
+                default => throw new ProtocolException("Unknown operation type: $operation"), // @codeCoverageIgnore
+            };
+
+            $offset++;
+        }
+
+        return $responses;
+    }
+
+    /**
+     * Handle simple response
+     *
+     * @param string $responseBytes
+     * @param int $offset
+     * @return Response
+     */
+    private function handleSimpleResponse(string $responseBytes, int $offset): Response
+    {
+        return Response::fromBytes($responseBytes[$offset], $this->size);
+    }
+
+    /**
+     * Handle full response
+     *
+     * @param string $responseBytes
+     * @param int $offset
+     * @return Response
+     */
+    private function handleFullResponse(string &$responseBytes, int &$offset): Response
+    {
+        if (ord($responseBytes[$offset]) === 0x00) {
+            return Response::fromBytes($responseBytes[$offset], $this->size);
+        }
+
+        $pendingBufferLength = $this->size->value * 2 + 1;
+        $scopeBytes = fread($this->socket, $pendingBufferLength);
+
+        if ($scopeBytes === false) {
+            throw new ConnectionException('Failed to read full response payload.'); // @codeCoverageIgnore
+        }
+
+        $responseBytes .= $scopeBytes;
+
+        $response = Response::fromBytes(
+            substr($responseBytes, $offset, $pendingBufferLength + 1),
+            $this->size
+        );
+
+        $offset += $pendingBufferLength;
+        return $response;
     }
 
     /**
