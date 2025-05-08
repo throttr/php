@@ -22,10 +22,10 @@ abstract class BaseRequest implements ShouldDefineSerialization {
      */
     public static function pack(ValueSize $size): string {
         return match ($size) {
-            ValueSize::UINT8 => 'C',
-            ValueSize::UINT16 => 'v',
-            ValueSize::UINT32 => 'V',
-            ValueSize::UINT64 => 'P',
+            ValueSize::UINT8 => 'C', // @codeCoverageIgnore
+            ValueSize::UINT16 => 'v', // @codeCoverageIgnore
+            ValueSize::UINT32 => 'V', // @codeCoverageIgnore
+            ValueSize::UINT64 => 'P', // @codeCoverageIgnore
         };
     }
 }

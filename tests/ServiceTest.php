@@ -71,9 +71,8 @@ final class ServiceTest extends TestCase
     {
         $key = '333333';
 
-        sleep(1); // esperamos como en el TS test
+        sleep(1);
 
-        // Insert inicial: 7 de cuota, 60 segundos de TTL
         $insert = $this->service->insert(
             key: $key,
             ttl: 60,
@@ -84,7 +83,6 @@ final class ServiceTest extends TestCase
         $this->assertIsBool($insert->success());
         $this->assertTrue($insert->success(), 'Insert should be successful');
 
-        // Query inicial
         $firstQuery = $this->service->query($key);
         $this->assertTrue($firstQuery->success());
         $this->assertEquals(7, $firstQuery->quota());
@@ -92,15 +90,12 @@ final class ServiceTest extends TestCase
         $this->assertGreaterThan(0, $firstQuery->ttl());
         $this->assertLessThan(60, $firstQuery->ttl());
 
-        // Update: decrease quota to 0
         $update1 = $this->service->update($key, AttributeType::QUOTA, ChangeType::DECREASE, 7);
         $this->assertTrue($update1->success());
 
-        // Update: try decrease again (should fail)
         $update2 = $this->service->update($key, AttributeType::QUOTA, ChangeType::DECREASE, 7);
         $this->assertFalse($update2->success());
 
-        // Query: quota should be 0
         $queryAfterDecrease = $this->service->query($key);
         $this->assertTrue($queryAfterDecrease->success());
         $this->assertEquals(0, $queryAfterDecrease->quota());
@@ -108,7 +103,6 @@ final class ServiceTest extends TestCase
         $this->assertGreaterThan(0, $queryAfterDecrease->ttl());
         $this->assertLessThan(60, $queryAfterDecrease->ttl());
 
-        // Patch: set quota to 10
         $patch = $this->service->update($key, AttributeType::QUOTA, ChangeType::PATCH, 10);
         $this->assertTrue($patch->success());
 
@@ -116,7 +110,6 @@ final class ServiceTest extends TestCase
         $this->assertTrue($queryAfterPatch->success());
         $this->assertEquals(10, $queryAfterPatch->quota());
 
-        // Increase quota by 20 (should become 30)
         $increase = $this->service->update($key, AttributeType::QUOTA, ChangeType::INCREASE, 20);
         $this->assertTrue($increase->success());
 
@@ -124,7 +117,6 @@ final class ServiceTest extends TestCase
         $this->assertTrue($queryAfterIncrease->success());
         $this->assertEquals(30, $queryAfterIncrease->quota());
 
-        // Increase TTL by 60
         $ttlIncrease = $this->service->update($key, AttributeType::TTL, ChangeType::INCREASE, 60);
         $this->assertTrue($ttlIncrease->success());
 
@@ -133,7 +125,6 @@ final class ServiceTest extends TestCase
         $this->assertGreaterThan(60, $queryAfterTtlIncrease->ttl());
         $this->assertLessThan(120, $queryAfterTtlIncrease->ttl());
 
-        // Decrease TTL by 60
         $ttlDecrease = $this->service->update($key, AttributeType::TTL, ChangeType::DECREASE, 60);
         $this->assertTrue($ttlDecrease->success());
 
@@ -142,7 +133,6 @@ final class ServiceTest extends TestCase
         $this->assertGreaterThan(0, $queryAfterTtlDecrease->ttl());
         $this->assertLessThan(60, $queryAfterTtlDecrease->ttl());
 
-        // Patch TTL to 90
         $ttlPatch = $this->service->update($key, AttributeType::TTL, ChangeType::PATCH, 90);
         $this->assertTrue($ttlPatch->success());
 
@@ -151,15 +141,12 @@ final class ServiceTest extends TestCase
         $this->assertGreaterThan(60, $queryAfterTtlPatch->ttl());
         $this->assertLessThan(90, $queryAfterTtlPatch->ttl());
 
-        // Purge the key
         $purge = $this->service->purge($key);
         $this->assertTrue($purge->success());
 
-        // Try purge again (should fail)
         $purgeAgain = $this->service->purge($key);
         $this->assertFalse($purgeAgain->success());
 
-        // Try query again (should fail)
         $queryFinal = $this->service->query($key);
         $this->assertFalse($queryFinal->success());
     }

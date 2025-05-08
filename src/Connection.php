@@ -17,11 +17,9 @@
 
 namespace Throttr\SDK;
 
-use RuntimeException;
 use SplQueue;
 use Throttr\SDK\Enum\ValueSize;
 use Throttr\SDK\Exceptions\ConnectionException;
-use Throttr\SDK\Exceptions\ProtocolException;
 use Throttr\SDK\Requests\BaseRequest;
 
 /**
@@ -92,23 +90,19 @@ class Connection
     /**
      * Send request
      *
-     * @param BaseRequest|array $requests
+     * @param array $requests
      * @return array
      */
-    public function send(BaseRequest|array $requests): array
+    public function send(array $requests): array
     {
         $buffer = '';
         $operations = [];
-        if (is_array($requests)) {
-            /** @var BaseRequest $request */
-            foreach ($requests as $request) {
-                $buffer .= $request->toBytes($this->size);
-                $operations[] = $request->type;
-            }
-        } else {
-            $buffer = $requests->toBytes($this->size);
-        }
 
+        /** @var BaseRequest $request */
+        foreach ($requests as $request) {
+            $buffer .= $request->toBytes($this->size);
+            $operations[] = $request->type;
+        }
 
         $pending = new PendingWrite($buffer, $operations);
 

@@ -17,11 +17,9 @@
 
 namespace Throttr\SDK;
 
-use Throttr\SDK\Enum\RequestType;
 use Throttr\SDK\Enum\TTLType;
 use Throttr\SDK\Enum\AttributeType;
 use Throttr\SDK\Enum\ChangeType;
-use RuntimeException;
 use Throttr\SDK\Enum\ValueSize;
 use Throttr\SDK\Exceptions\ServiceException;
 use Throttr\SDK\Requests\BaseRequest;
