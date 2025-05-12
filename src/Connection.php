@@ -161,7 +161,7 @@ class Connection
         foreach ($pending->operations as $operation) {
             $responses[] = match ($operation) {
                 RequestType::INSERT, RequestType::UPDATE, RequestType::PURGE, RequestType::SET => $this->handleStatusResponse($responseBytes, $offset, $operation),
-                RequestType::QUERY, RequestType::GET => $this->handleQueryResponse($responseBytes, $offset, $operation),
+                RequestType::QUERY, RequestType::GET => $this->handlePayloadResponse($responseBytes, $offset, $operation),
                 default => throw new ProtocolException("Unknown operation type: $operation->value"), // @codeCoverageIgnore
             };
 
@@ -192,7 +192,7 @@ class Connection
      * @param RequestType $operation
      * @return Response
      */
-    private function handleQueryResponse(string &$responseBytes, int &$offset, RequestType $operation): Response
+    private function handlePayloadResponse(string &$responseBytes, int &$offset, RequestType $operation): Response
     {
         if (ord($responseBytes[$offset]) === 0x00) {
             return Response::fromBytes($responseBytes[$offset], $this->size, $operation);

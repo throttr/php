@@ -34,6 +34,8 @@ composer require throttr/sdk
 
 ## Basic Usage
 
+### As Rate Limiter
+
 ```php
 <?php
 
@@ -84,11 +86,34 @@ $service->update(
 $response = $service->query($key);
 
 printf(
-    "Allowed: %s, Remaining: %d, TTL: %dms\n",
+    "Success: %s, Quota: %d, TTL: %dms\n",
     $response->success() ? 'true' : 'false',
     $response->quota() ?? 0,
     (int)($response->ttl() ?? 0)
 );
+
+```
+
+### As in-memory database
+
+```php
+$key = 'json-storage';
+
+$set = $service->set(
+    key: $key,
+    ttl: 6,
+    ttlType: TTLType::HOURS,
+    value: "EHLO"
+);
+
+echo "SET status: " . $set->success() . PHP_EOL;
+
+$get = $service->get(
+    key: $key,
+);
+
+echo "GET status: " . $get->success() . PHP_EOL;
+echo "GET value: " . $get->value() . PHP_EOL; // Must be "EHLO"
 
 // Close connections
 $service->close();
@@ -98,7 +123,7 @@ $service->close();
 
 - The protocol assumes Little Endian architecture.
 - The internal message queue ensures requests are processed sequentially.
-- The package is defined to works with protocol 4.0.11 or greatest.
+- The package is defined to works with protocol 4.0.14 or greatest.
 
 ---
 

@@ -72,7 +72,6 @@ final class Response
      * @param int|null $ttlType
      * @param string|null $value
      */
-
     private function __construct(
         ?bool $success = null,
         ?int  $quota = null,
@@ -101,19 +100,17 @@ final class Response
 
         $success = (ord($data[0]) === 1);
         if ($length === 1) {
-            return new self(success: $success);
+            return new Response(success: $success);
         } else {
             $valueSize = $size->value;
             if ($type === RequestType::QUERY) {
                 $quota = unpack(BaseRequest::pack($size), substr($data, 1, $valueSize))[1];
+                $offset = 1 + $valueSize;
+                $ttlType = ord($data[$offset]);
+                $offset += 1;
+                $ttl = unpack(BaseRequest::pack($size), substr($data, $offset, $valueSize))[1];
 
-                $ttlTypeOffset = 1 + $valueSize;
-                $ttlType = ord($data[$ttlTypeOffset]);
-
-                $ttlOffset = $ttlTypeOffset + 1;
-                $ttl = unpack(BaseRequest::pack($size), substr($data, $ttlOffset, $valueSize))[1];
-
-                return new self(
+                return new Response(
                     success: $success,
                     quota: $quota,
                     ttl: $ttl,
@@ -127,7 +124,7 @@ final class Response
                 $offset += $valueSize * 2;
                 $value = substr($data, $offset);
 
-                return new self(
+                return new Response(
                     success: $success,
                     ttl: $ttl,
                     ttlType: $ttlType,
