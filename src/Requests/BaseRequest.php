@@ -3,16 +3,19 @@
 namespace Throttr\SDK\Requests;
 
 use Throttr\SDK\Contracts\ShouldDefineSerialization;
+use Throttr\SDK\Enum\RequestType;
 use Throttr\SDK\Enum\ValueSize;
 
+/**
+ * Base request
+ */
 abstract class BaseRequest implements ShouldDefineSerialization {
     /**
      * Type
      *
-     * @var int
+     * @var RequestType
      */
-    public int $type = 0x00;
-
+    public RequestType $type = RequestType::INSERT;
 
     /**
      * Pack

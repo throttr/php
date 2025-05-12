@@ -41,4 +41,14 @@ enum RequestType: int
      * Purge
      */
     case PURGE = 0x04;
+
+    /**
+     * Set
+     */
+    case SET = 0x05;
+
+    /**
+     * Get
+     */
+    case GET = 0x06;
 }

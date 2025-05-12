@@ -17,6 +17,7 @@
 
 namespace Throttr\SDK;
 
+use Throttr\SDK\Enum\RequestType;
 use Throttr\SDK\Enum\TTLType;
 use Throttr\SDK\Enum\ValueSize;
 use Throttr\SDK\Requests\BaseRequest;
@@ -54,6 +55,14 @@ final class Response
      */
     private ?int $ttlType;
 
+
+    /**
+     * Value
+     *
+     * @var string|null
+     */
+    private ?string $value;
+
     /**
      * Constructor
      *
@@ -61,18 +70,21 @@ final class Response
      * @param int|null $quota
      * @param int|null $ttl
      * @param int|null $ttlType
+     * @param string|null $value
      */
 
     private function __construct(
         ?bool $success = null,
         ?int  $quota = null,
         ?int  $ttl = null,
-        ?int  $ttlType = null
+        ?int  $ttlType = null,
+        ?string  $value = null,
     ) {
         $this->success = $success;
         $this->quota = $quota;
         $this->ttl = $ttl;
         $this->ttlType = $ttlType;
+        $this->value = $value;
     }
 
     /**
@@ -80,9 +92,10 @@ final class Response
      *
      * @param string $data
      * @param ValueSize $size
+     * @param RequestType $type
      * @return self
      */
-    public static function fromBytes(string $data, ValueSize $size): self
+    public static function fromBytes(string $data, ValueSize $size, RequestType $type): self
     {
         $length = strlen($data);
 
@@ -91,20 +104,36 @@ final class Response
             return new self(success: $success);
         } else {
             $valueSize = $size->value;
-            $quota = unpack(BaseRequest::pack($size), substr($data, 1, $valueSize))[1];
+            if ($type === RequestType::QUERY) {
+                $quota = unpack(BaseRequest::pack($size), substr($data, 1, $valueSize))[1];
 
-            $ttlTypeOffset = 1 + $valueSize;
-            $ttlType = ord($data[$ttlTypeOffset]);
+                $ttlTypeOffset = 1 + $valueSize;
+                $ttlType = ord($data[$ttlTypeOffset]);
 
-            $ttlOffset = $ttlTypeOffset + 1;
-            $ttl = unpack(BaseRequest::pack($size), substr($data, $ttlOffset, $valueSize))[1];
+                $ttlOffset = $ttlTypeOffset + 1;
+                $ttl = unpack(BaseRequest::pack($size), substr($data, $ttlOffset, $valueSize))[1];
 
-            return new self(
-                success: $success,
-                quota: $quota,
-                ttl: $ttl,
-                ttlType: $ttlType
-            );
+                return new self(
+                    success: $success,
+                    quota: $quota,
+                    ttl: $ttl,
+                    ttlType: $ttlType
+                );
+            } else {
+                $offset = 1;
+                $ttlType = ord($data[$offset]);
+                $offset += 1;
+                $ttl = unpack(BaseRequest::pack($size), substr($data, $offset, $valueSize))[1];
+                $offset += $valueSize * 2;
+                $value = substr($data, $offset);
+
+                return new self(
+                    success: $success,
+                    ttl: $ttl,
+                    ttlType: $ttlType,
+                    value: $value,
+                );
+            }
         }
     }
 
@@ -148,5 +177,15 @@ final class Response
     public function ttlType(): ?TTLType
     {
         return $this->ttlType !== null ? TTLType::from($this->ttlType) : null;
+    }
+
+    /**
+     * Value
+     *
+     * @return string|null
+     */
+    public function value(): ?string
+    {
+        return $this->value;
     }
 }

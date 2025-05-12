@@ -23,9 +23,11 @@ use Throttr\SDK\Enum\ChangeType;
 use Throttr\SDK\Enum\ValueSize;
 use Throttr\SDK\Exceptions\ServiceException;
 use Throttr\SDK\Requests\BaseRequest;
+use Throttr\SDK\Requests\GetRequest;
 use Throttr\SDK\Requests\InsertRequest;
 use Throttr\SDK\Requests\PurgeRequest;
 use Throttr\SDK\Requests\QueryRequest;
+use Throttr\SDK\Requests\SetRequest;
 use Throttr\SDK\Requests\UpdateRequest;
 
 /**
@@ -191,6 +193,43 @@ final class Service
 
         return $this->send([$request])[0];
     }
+
+    /**
+     * Set
+     *
+     * @param string $key
+     * @param int $ttl
+     * @param TTLType $ttlType
+     * @param string $value
+     * @return Response
+     */
+    public function set(string $key, int $ttl, TTLType $ttlType, string $value): Response
+    {
+        $request = new SetRequest(
+            key: $key,
+            ttl_type: $ttlType,
+            ttl: $ttl,
+            value: $value
+        );
+
+        return $this->send([$request])[0];
+    }
+
+    /**
+     * Get
+     *
+     * @param string $key
+     * @return Response
+     */
+    public function get(string $key): Response
+    {
+        $request = new GetRequest(
+            key: $key,
+        );
+
+        return $this->send([$request])[0];
+    }
+
 
     /**
      * Send
