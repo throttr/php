@@ -6,16 +6,16 @@ use Throttr\SDK\Enum\RequestType;
 use Throttr\SDK\Enum\ValueSize;
 
 /**
- * Purge request
+ * Get request
  */
-class PurgeRequest extends BaseRequest
+class GetRequest extends BaseRequest
 {
     /**
      * Type
      *
      * @var RequestType
      */
-    public RequestType $type = RequestType::PURGE;
+    public RequestType $type = RequestType::GET;
 
     /**
      * Constructor

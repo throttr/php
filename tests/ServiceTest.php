@@ -151,6 +151,32 @@ final class ServiceTest extends TestCase
         $this->assertFalse($queryFinal->success());
     }
 
+    public function testGetAndSet()
+    {
+        $key = '777777';
+
+        sleep(1);
+
+        $set = $this->service->set(
+            key: $key,
+            ttl: 60,
+            ttlType: TTLType::SECONDS,
+            value: "EHLO"
+        );
+
+        $this->assertTrue($set->success());
+
+        $get = $this->service->get(
+            key: $key,
+        );
+
+        $this->assertTrue($get->success());
+        $this->assertEquals("EHLO", $get->value());
+
+        $purge = $this->service->purge($key);
+        $this->assertTrue($purge->success());
+    }
+
 
     /**
      * Update and purge

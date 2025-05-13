@@ -4,6 +4,7 @@ namespace Throttr\SDK\Requests;
 
 use Throttr\SDK\Enum\AttributeType;
 use Throttr\SDK\Enum\ChangeType;
+use Throttr\SDK\Enum\RequestType;
 use Throttr\SDK\Enum\TTLType;
 use Throttr\SDK\Enum\ValueSize;
 
@@ -15,9 +16,9 @@ class UpdateRequest extends BaseRequest
     /**
      * Type
      *
-     * @var int
+     * @var RequestType
      */
-    public int $type = 0x03;
+    public RequestType $type = RequestType::UPDATE;
 
     /**
      * Constructor
@@ -44,7 +45,7 @@ class UpdateRequest extends BaseRequest
      */
     public function toBytes(ValueSize $size): string
     {
-        return pack(static::pack(ValueSize::UINT8), $this->type) .
+        return pack(static::pack(ValueSize::UINT8), $this->type->value) .
             pack(static::pack(ValueSize::UINT8), $this->attribute->value) .
             pack(static::pack(ValueSize::UINT8), $this->change->value) .
             pack(static::pack($size), $this->value) .

@@ -18,6 +18,7 @@
 namespace Throttr\SDK;
 
 use SplQueue;
+use Throttr\SDK\Enum\RequestType;
 use Throttr\SDK\Enum\ValueSize;
 use Throttr\SDK\Exceptions\ConnectionException;
 use Throttr\SDK\Exceptions\ProtocolException;
@@ -159,9 +160,9 @@ class Connection
 
         foreach ($pending->operations as $operation) {
             $responses[] = match ($operation) {
-                0x01, 0x03, 0x04 => $this->handleSimpleResponse($responseBytes, $offset),
-                0x02 => $this->handleFullResponse($responseBytes, $offset),
-                default => throw new ProtocolException("Unknown operation type: $operation"), // @codeCoverageIgnore
+                RequestType::INSERT, RequestType::UPDATE, RequestType::PURGE, RequestType::SET => $this->handleStatusResponse($responseBytes, $offset, $operation),
+                RequestType::QUERY, RequestType::GET => $this->handlePayloadResponse($responseBytes, $offset, $operation),
+                default => throw new ProtocolException("Unknown operation type: $operation->value"), // @codeCoverageIgnore
             };
 
             $offset++;
@@ -175,11 +176,12 @@ class Connection
      *
      * @param string $responseBytes
      * @param int $offset
+     * @param RequestType $operation
      * @return Response
      */
-    private function handleSimpleResponse(string $responseBytes, int $offset): Response
+    private function handleStatusResponse(string $responseBytes, int $offset, RequestType $operation): Response
     {
-        return Response::fromBytes($responseBytes[$offset], $this->size);
+        return Response::fromBytes($responseBytes[$offset], $this->size, $operation);
     }
 
     /**
@@ -187,15 +189,17 @@ class Connection
      *
      * @param string $responseBytes
      * @param int $offset
+     * @param RequestType $operation
      * @return Response
      */
-    private function handleFullResponse(string &$responseBytes, int &$offset): Response
+    private function handlePayloadResponse(string &$responseBytes, int &$offset, RequestType $operation): Response
     {
         if (ord($responseBytes[$offset]) === 0x00) {
-            return Response::fromBytes($responseBytes[$offset], $this->size);
+            return Response::fromBytes($responseBytes[$offset], $this->size, $operation);
         }
 
         $pendingBufferLength = $this->size->value * 2 + 1;
+
         $scopeBytes = fread($this->socket, $pendingBufferLength);
 
         if ($scopeBytes === false) {
@@ -204,9 +208,23 @@ class Connection
 
         $responseBytes .= $scopeBytes;
 
+        if (RequestType::GET->value === $operation->value) {
+            $valueBufferLength = unpack(BaseRequest::pack($this->size), substr($responseBytes, strlen($responseBytes) - $this->size->value, $this->size->value))[1];
+            $valueBytes = fread($this->socket, $valueBufferLength);
+
+            if ($valueBytes === false) {
+                throw new ConnectionException('Failed to read full response payload.'); // @codeCoverageIgnore
+            }
+
+            $responseBytes .= $valueBytes;
+
+            $pendingBufferLength += $valueBufferLength;
+        }
+
         $response = Response::fromBytes(
             substr($responseBytes, $offset, $pendingBufferLength + 1),
-            $this->size
+            $this->size,
+            $operation
         );
 
         $offset += $pendingBufferLength;

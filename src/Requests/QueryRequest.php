@@ -2,6 +2,7 @@
 
 namespace Throttr\SDK\Requests;
 
+use Throttr\SDK\Enum\RequestType;
 use Throttr\SDK\Enum\ValueSize;
 
 /**
@@ -12,9 +13,9 @@ class QueryRequest extends BaseRequest
     /**
      * Type
      *
-     * @var int
+     * @var RequestType
      */
-    public int $type = 0x02;
+    public RequestType $type = RequestType::QUERY;
 
     /**
      * Constructor
@@ -35,7 +36,7 @@ class QueryRequest extends BaseRequest
      */
     public function toBytes(ValueSize $size): string
     {
-        return pack(static::pack(ValueSize::UINT8), $this->type) .
+        return pack(static::pack(ValueSize::UINT8), $this->type->value) .
             pack(static::pack(ValueSize::UINT8), strlen($this->key)) .
             $this->key;
     }

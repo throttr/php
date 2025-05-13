@@ -20,9 +20,9 @@
 <a href="https://sonarcloud.io/project/overview?id=throttr_php"><img src="https://sonarcloud.io/api/project_badges/measure?project=throttr_throttr&metric=sqale_rating" alt="Maintainability"></a>
 </p>
 
-php client for communicating with a Throttr server over TCP.
+PHP `>= 8.1` client for communicating with a [Throttr Server](https://github.com/throttr/throttr).
 
-The SDK enables sending traffic control requests efficiently, without HTTP, respecting the server's native binary protocol.
+The SDK enables [in-memory data objects](https://en.wikipedia.org/wiki/In-memory_database) and [rate limiting](https://en.wikipedia.org/wiki/Rate_limiting) efficiently, only using TCP, respecting the server's native binary protocol.
 
 ## 🛠️ Installation
 
@@ -33,6 +33,8 @@ composer require throttr/sdk
 ```
 
 ## Basic Usage
+
+### As Rate Limiter
 
 ```php
 <?php
@@ -84,11 +86,34 @@ $service->update(
 $response = $service->query($key);
 
 printf(
-    "Allowed: %s, Remaining: %d, TTL: %dms\n",
+    "Success: %s, Quota: %d, TTL: %dms\n",
     $response->success() ? 'true' : 'false',
     $response->quota() ?? 0,
     (int)($response->ttl() ?? 0)
 );
+
+```
+
+### As in-memory database
+
+```php
+$key = 'json-storage';
+
+$set = $service->set(
+    key: $key,
+    ttl: 6,
+    ttlType: TTLType::HOURS,
+    value: "EHLO"
+);
+
+echo "SET status: " . $set->success() . PHP_EOL;
+
+$get = $service->get(
+    key: $key,
+);
+
+echo "GET status: " . $get->success() . PHP_EOL;
+echo "GET value: " . $get->value() . PHP_EOL; // Must be "EHLO"
 
 // Close connections
 $service->close();
@@ -98,7 +123,7 @@ $service->close();
 
 - The protocol assumes Little Endian architecture.
 - The internal message queue ensures requests are processed sequentially.
-- The package is defined to works with protocol 4.0.11 or greatest.
+- The package is defined to works with protocol 4.0.14 or greatest.
 
 ---
 
