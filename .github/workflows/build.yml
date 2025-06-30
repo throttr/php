@@ -25,6 +25,7 @@ jobs:
         with:
           php-version: '8.4'
           coverage: xdebug
+          extensions: swoole
 
       - name: Validate Composer
         run: composer validate --strict
