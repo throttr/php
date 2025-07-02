@@ -17,6 +17,7 @@
 
 namespace Throttr\SDK;
 
+use Swoole\Coroutine;
 use Throttr\SDK\Enum\TTLType;
 use Throttr\SDK\Enum\AttributeType;
 use Throttr\SDK\Enum\ChangeType;
@@ -35,58 +36,17 @@ use Throttr\SDK\Requests\UpdateRequest;
  */
 final class Service
 {
-    /**
-     * @var Connection[]
-     */
     private array $connections = [];
-
-    /**
-     * Round-robin index
-     *
-     * @var int
-     */
     private int $roundRobinIndex = 0;
-
-    /**
-     * Host
-     *
-     * @var string
-     */
     private string $host;
-
-    /**
-     * Port
-     *
-     * @var int
-     */
     private int $port;
-
-    /**
-     * Value size
-     *
-     * @var ValueSize
-     */
     private ValueSize $size;
-
-    /**
-     * Maximum connections
-     *
-     * @var int
-     */
     private int $maxConnections;
 
-    /**
-     * Constructor
-     *
-     * @param string $host
-     * @param int $port
-     * @param ValueSize $size
-     * @param int $maxConnections
-     */
     public function __construct(string $host, int $port, ValueSize $size, int $maxConnections)
     {
         if ($maxConnections <= 0) {
-            throw new \InvalidArgumentException('maxConnections must be greater than 0.'); // @codeCoverageIgnore
+            throw new \InvalidArgumentException('maxConnections must be greater than 0.');
         }
 
         $this->host = $host;
@@ -95,11 +55,6 @@ final class Service
         $this->maxConnections = $maxConnections;
     }
 
-    /**
-     * Connect
-     *
-     * @return void
-     */
     public function connect(): void
     {
         for ($i = 0; $i < $this->maxConnections; $i++) {
@@ -108,139 +63,54 @@ final class Service
         }
     }
 
-    /**
-     * Close
-     *
-     * @return void
-     */
     public function close(): void
     {
         foreach ($this->connections as $connection) {
             $connection->close();
         }
-
         $this->connections = [];
     }
 
-    /**
-     * Insert
-     *
-     * @param string $key
-     * @param int $ttl
-     * @param TTLType $ttlType
-     * @param int $quota
-     * @return Response
-     */
     public function insert(string $key, int $ttl, TTLType $ttlType, int $quota): Response
     {
-        $request = new InsertRequest(
-            key: $key,
-            quota: $quota,
-            ttl_type: $ttlType,
-            ttl: $ttl
-        );
-
+        $request = new InsertRequest($key, $quota, $ttlType, $ttl);
         return $this->send([$request])[0];
     }
 
-    /**
-     * Query
-     *
-     * @param string $key
-     * @return Response
-     */
     public function query(string $key): Response
     {
-        $request = new QueryRequest(
-            key: $key,
-        );
-
+        $request = new QueryRequest($key);
         return $this->send([$request])[0];
     }
 
-    /**
-     * Purge
-     *
-     * @param string $key
-     * @return Response
-     */
     public function purge(string $key): Response
     {
-        $request = new PurgeRequest(
-            key: $key
-        );
-
+        $request = new PurgeRequest($key);
         return $this->send([$request])[0];
     }
 
-    /**
-     * Update
-     *
-     * @param string $key
-     * @param AttributeType $attribute
-     * @param ChangeType $change
-     * @param int $value
-     * @return Response
-     */
     public function update(string $key, AttributeType $attribute, ChangeType $change, int $value): Response
     {
-        $request = new UpdateRequest(
-            attribute: $attribute,
-            change: $change,
-            value: $value,
-            key: $key,
-        );
-
+        $request = new UpdateRequest($attribute, $change, $value, $key);
         return $this->send([$request])[0];
     }
 
-    /**
-     * Set
-     *
-     * @param string $key
-     * @param int $ttl
-     * @param TTLType $ttlType
-     * @param string $value
-     * @return Response
-     */
     public function set(string $key, int $ttl, TTLType $ttlType, string $value): Response
     {
-        $request = new SetRequest(
-            key: $key,
-            ttl_type: $ttlType,
-            ttl: $ttl,
-            value: $value
-        );
-
+        $request = new SetRequest($key, $ttlType, $ttl, $value);
         return $this->send([$request])[0];
     }
 
-    /**
-     * Get
-     *
-     * @param string $key
-     * @return Response
-     */
     public function get(string $key): Response
     {
-        $request = new GetRequest(
-            key: $key,
-        );
-
+        $request = new GetRequest($key);
         return $this->send([$request])[0];
     }
 
-
-    /**
-     * Send
-     *
-     * @param BaseRequest|array $requests
-     * @return Response|array
-     */
     public function send(BaseRequest|array $requests): Response|array
     {
         if (empty($this->connections)) {
-            throw new ServiceException('No available connections.'); // @codeCoverageIgnore
+            throw new ServiceException('No available connections.');
         }
 
         $index = $this->roundRobinIndex;
@@ -248,6 +118,13 @@ final class Service
 
         $connection = $this->connections[$index];
 
-        return $connection->send($requests);
+        $chan = $connection->send(is_array($requests) ? $requests : [$requests]);
+        $res = $chan->pop();
+
+        if ($res instanceof \Throwable) {
+            throw $res;
+        }
+
+        return $res;
     }
 }
