@@ -48,7 +48,6 @@ class Connection
         $this->connected = true;
         $this->queue = new Channel(1024);
         $this->pendingChannels = new \SplQueue();
-
         go(fn() => $this->processQueue());
         go(fn() => $this->processResponses());
     }
@@ -70,31 +69,31 @@ class Connection
 
     private function processQueue(): void
     {
-        while (true) {
-            $job = $this->queue->pop();
-            if ($job === false) break;
+//        while (true) {
+//            $job = $this->queue->pop();
+//            if ($job === false) break;
+//
+//            [$buffer, $operations, $chan] = $job;
 
-            [$buffer, $operations, $chan] = $job;
-
-            try {
-                $written = $this->client->send($buffer);
-                if ($written === false || $written !== strlen($buffer)) {
-                    throw new ConnectionException("Failed to write complete data to socket.");
-                }
-
-                $this->pendingChannels->push([$operations, $chan]);
-            } catch (\Throwable $e) {
-                $chan->push($e);
-            }
-        }
+//            try {
+//                $written = $this->client->send($buffer);
+//                if ($written === false || $written !== strlen($buffer)) {
+//                    throw new ConnectionException("Failed to write complete data to socket.");
+//                }
+//
+//                $this->pendingChannels->push([$operations, $chan]);
+//            } catch (\Throwable $e) {
+//                $chan->push($e);
+//            }
+//        }
     }
 
     private function processResponses(): void
     {
         while (true) {
             if ($this->pendingChannels->isEmpty()) {
-                \Swoole\Coroutine::sleep(0.001);
-                continue;
+                echo "WTF";
+                break;
             }
 
             [$operations, $chan] = $this->pendingChannels->shift();
@@ -148,10 +147,7 @@ class Connection
     {
         $data = '';
         while (strlen($data) < $length) {
-            $chunk = $this->client->recv($length - strlen($data));
-            if ($chunk === false || $chunk === '') {
-                throw new ConnectionException("Expected {$length} bytes, got " . strlen($data));
-            }
+            $chunk = $this->client->recv();
             $data .= $chunk;
         }
         return $data;

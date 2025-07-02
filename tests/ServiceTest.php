@@ -18,6 +18,7 @@
 use Swoole\Coroutine\Client;
 use Throttr\SDK\Requests\BaseRequest;
 use Throttr\SDK\Requests\InsertRequest;
+use Throttr\SDK\Service;
 use function Swoole\Coroutine\run;
 use Throttr\SDK\Enum\TTLType;
 use Throttr\SDK\Enum\ValueSize;
@@ -30,9 +31,31 @@ use PHPUnit\Framework\TestCase;
  */
 final class ServiceTest extends TestCase
 {
+
+    private Service $service;
+
+    /**
+     * Set up
+     *
+     * @return void
+     */
+    protected function setUp(): void
+    {
+    }
+
+    /**
+     * Tear down
+     *
+     * @return void
+     */
+    protected function tearDown(): void
+    {
+        $this->service->close();
+    }
+
     public function testBasicConnection(): void
     {
-        run(function () {
+        $this->prepares(function () {
             $size = getenv('THROTTR_SIZE') ?: 'uint16';
             $valueSize = match ($size) {
                 'uint8' => ValueSize::UINT8,
@@ -53,4 +76,55 @@ final class ServiceTest extends TestCase
             $client->close();
         });
     }
+
+    protected function prepares($callback): void
+    {
+        run(function () use ($callback) {
+            $size = getenv('THROTTR_SIZE') ?: 'uint16';
+
+            $valueSize = match ($size) {
+                'uint8' => ValueSize::UINT8,
+                'uint16' => ValueSize::UINT16,
+                'uint32' => ValueSize::UINT32,
+                'uint64' => ValueSize::UINT64,
+                default => throw new \InvalidArgumentException("Unsupported THROTTR_SIZE: $size"),
+            };
+
+            $this->service = new Service('127.0.0.1', 9000, $valueSize, 1);
+            $this->service->connect();
+            echo "HEY\n";
+            $callback();
+            echo "LISTEN\n";
+            $this->service->close();
+            echo "WOW\n";
+        });
+    }
+
+//    public function testGetAndSet()
+//    {
+//        $this->prepares(function () {
+////            $key = '777777';
+////
+////            sleep(1);
+////
+////            $set = $this->service->set(
+////                key: $key,
+////                ttl: 60,
+////                ttlType: TTLType::SECONDS,
+////                value: "EHLO"
+////            );
+////
+////            $this->assertTrue($set->success());
+////
+////            $get = $this->service->get(
+////                key: $key,
+////            );
+////
+////            $this->assertTrue($get->success());
+////            $this->assertEquals("EHLO", $get->value());
+////
+////            $purge = $this->service->purge($key);
+////            $this->assertTrue($purge->success());
+//        });
+//    }
 }
