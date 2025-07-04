@@ -17,6 +17,8 @@
 
 namespace Throttr\SDK;
 
+use Co;
+use SplQueue;
 use Swoole\Coroutine\Client;
 use Swoole\Coroutine\Channel;
 use Throttr\SDK\Enum\RequestType;
@@ -24,6 +26,7 @@ use Throttr\SDK\Enum\ValueSize;
 use Throttr\SDK\Exceptions\ConnectionException;
 use Throttr\SDK\Exceptions\ProtocolException;
 use Throttr\SDK\Requests\BaseRequest;
+use Throwable;
 
 /**
  * Connection (Swoole async, con centralización de lectura segura)
@@ -33,8 +36,10 @@ class Connection
     private Client $client;
     private ValueSize $size;
     private Channel $queue;
-    private \SplQueue $pendingChannels;
+    private Channel $pendingChannels;
     private bool $connected = false;
+
+    private array $tasks = [];
 
     public function __construct(string $host, int $port, ValueSize $size)
     {
@@ -47,13 +52,17 @@ class Connection
 
         $this->connected = true;
         $this->queue = new Channel(1024);
-        $this->pendingChannels = new \SplQueue();
-        go(fn() => $this->processQueue());
-        go(fn() => $this->processResponses());
+        $this->pendingChannels = new Channel(1024);
+
+        $this->tasks = [
+            go(fn() => $this->processQueue()),
+            go(fn() => $this->processResponses()),
+        ];
     }
 
-    public function send(array $requests): Channel
+    public function send(array $requests): array
     {
+        echo "SENDING \n";
         $buffer = '';
         $operations = [];
 
@@ -62,63 +71,99 @@ class Connection
             $operations[] = $request->type;
         }
 
-        $chan = new Channel(1);
-        $this->queue->push([$buffer, $operations, $chan]);
-        return $chan;
+        echo "CHANNEL CREATED \n";
+        $channel = new Channel(1);
+        $this->queue->push([$buffer, $operations, $channel]);
+        echo "CHANNEL PUSHED WAITING FOR RESPONSE \n";
+        $result = $channel->pop();
+        $exitChannel = $channel->close();
+        echo "CHANNEL EXIT: {$exitChannel}\n";
+        return $result;
     }
 
     private function processQueue(): void
     {
-//        while (true) {
-//            $job = $this->queue->pop();
-//            if ($job === false) break;
-//
-//            [$buffer, $operations, $chan] = $job;
+        while (!$this->client->connected) {
+            echo "NOT CONNECTED YET (processQueue) \n";
+            Co::sleep(1);
+        }
 
-//            try {
-//                $written = $this->client->send($buffer);
-//                if ($written === false || $written !== strlen($buffer)) {
-//                    throw new ConnectionException("Failed to write complete data to socket.");
-//                }
-//
-//                $this->pendingChannels->push([$operations, $chan]);
-//            } catch (\Throwable $e) {
-//                $chan->push($e);
-//            }
-//        }
+        while ($this->connected) {
+            echo "JOB RETRIEVING \n";
+            $job = $this->queue->pop(3);
+
+            if ($job === false) {
+                echo "CLIENT QUEUE CLOSED: {$this->client->errCode}::{$this->client->errMsg} \n";
+                echo "QUEUE CLOSED\n";
+                break;
+            }
+
+            try {
+                $written = $this->client->send($job[0]);
+                if ($written === false || $written !== strlen($job[0])) {
+                    throw new ConnectionException("Failed to write complete data to socket.");
+                }
+                $this->pendingChannels->push([$job[1], $job[2]]);
+            } catch (Throwable $e) {
+                echo "SOMETHING WENT WRONG {$e->getMessage()} {$e->getFile()}::{$e->getLine()} \n";
+                $job[2]->push($e);
+            }
+        }
+
+        echo "COROUTINE QUEUE CLOSED\n";
     }
 
     private function processResponses(): void
     {
-        while (true) {
-            if ($this->pendingChannels->isEmpty()) {
-                echo "WTF";
+        while (!$this->client->connected) {
+            echo "NOT CONNECTED YET (processResponses) \n";
+            Co::sleep(1);
+        }
+
+        while ($this->connected) {
+            echo "PENDING CHANNELS SHIFTING \n";
+            $result = $this->pendingChannels->pop(3);
+            echo "CHANNEL SHIFT WITH RESPONSE \n";
+
+            if ($result === false) {
+                echo "PENDING CHANNELS CLOSED\n";
+                echo "PENDING CHANNELS CLOSED: {$this->client->errCode}::{$this->client->errMsg} \n";
                 break;
             }
 
-            [$operations, $chan] = $this->pendingChannels->shift();
             $responses = [];
 
             try {
-                foreach ($operations as $operation) {
-                    $status = $this->recvExact(1);
+                $data = $this->client->recv();
+                echo "RECEIVED: " . bin2hex($data) . "\n";
 
+                foreach ($result[0] as $operation) {
+                    /* @var RequestType $operation */
+                    echo "OPERATION: " . $operation->value . "\n";
                     $responses[] = match ($operation) {
                         RequestType::INSERT, RequestType::UPDATE, RequestType::PURGE, RequestType::SET =>
-                        $this->handleStatusResponse($status, $operation),
+                        $this->handleStatusResponse($data, $operation),
 
                         RequestType::QUERY, RequestType::GET =>
-                        $this->handlePayloadResponse($status, $operation),
+                        $this->handlePayloadResponse($data, $operation),
 
                         default => throw new ProtocolException("Unknown operation type: {$operation->value}"),
                     };
                 }
+                $encodes = [];
+                foreach ($responses as $response) {
+                    $encodes[] = json_encode($response->success());
+                }
 
-                $chan->push($responses);
-            } catch (\Throwable $e) {
-                $chan->push($e);
+                echo "RESPONSES: " . json_encode($encodes) . "\n";
+
+                $result[1]->push($responses);
+            } catch (Throwable $e) {
+                echo "SOMETHING WENT WRONG {$e->getMessage()} {$e->getFile()}::{$e->getLine()} \n";
+                $result[1]->push($e);
             }
         }
+        echo "COROUTINE RESPONSES CLOSED\n";
     }
 
     private function handleStatusResponse(string $status, RequestType $operation): Response
@@ -130,34 +175,28 @@ class Connection
     {
         $payload = $status;
 
-        $scopeLength = $this->size->value * 2;
-        $scope = $this->recvExact($scopeLength);
-        $payload .= $scope;
-
-        if ($operation === RequestType::GET) {
-            $valueLength = unpack(BaseRequest::pack($this->size), substr($scope, -$this->size->value))[1];
-            $value = $this->recvExact($valueLength);
-            $payload .= $value;
-        }
+//        if ($operation === RequestType::GET) {
+//            $valueLength = unpack(BaseRequest::pack($this->size), substr($scope, -$this->size->value))[1];
+//            $value = $this->recvExact($valueLength);
+//            $payload .= $value;
+//        }
 
         return Response::fromBytes($payload, $this->size, $operation);
-    }
-
-    private function recvExact(int $length): string
-    {
-        $data = '';
-        while (strlen($data) < $length) {
-            $chunk = $this->client->recv();
-            $data .= $chunk;
-        }
-        return $data;
     }
 
     public function close(): void
     {
         if ($this->connected) {
-            $this->client->close();
+            echo "CLOSING ON CONNECTION \n";
             $this->connected = false;
+            $exitCodeClient = $this->client->close();
+            $exitCodeQueue = $this->queue->close();
+            $exitCodePending = $this->pendingChannels->close();
+            $exitCodeJoin = Co::join($this->tasks);
+            echo "CLOSED ON CONNECTION \n";
+            echo "EXITS: {$exitCodeJoin} {$exitCodePending} {$exitCodeQueue} {$exitCodeClient} \n";
+            echo "WTF: {$this->pendingChannels->length()}\n";
+            echo "WTF: {$this->queue->length()}\n";
         }
     }
 }

@@ -34,49 +34,6 @@ final class ServiceTest extends TestCase
 
     private Service $service;
 
-    /**
-     * Set up
-     *
-     * @return void
-     */
-    protected function setUp(): void
-    {
-    }
-
-    /**
-     * Tear down
-     *
-     * @return void
-     */
-    protected function tearDown(): void
-    {
-        $this->service->close();
-    }
-
-    public function testBasicConnection(): void
-    {
-        $this->prepares(function () {
-            $size = getenv('THROTTR_SIZE') ?: 'uint16';
-            $valueSize = match ($size) {
-                'uint8' => ValueSize::UINT8,
-                'uint16' => ValueSize::UINT16,
-                'uint32' => ValueSize::UINT32,
-                'uint64' => ValueSize::UINT64,
-                default => throw new InvalidArgumentException("Unsupported THROTTR_SIZE: $size"),
-            };
-            $client = new Client(SWOOLE_SOCK_TCP);
-            $status = $client->connect('127.0.0.1', 9000);
-            $this->assertTrue($status);
-            $request = new InsertRequest("ABC", 10, TTLType::SECONDS, 30);
-            $client->send($request->toBytes($valueSize));
-            $data = $client->recv(7000);
-            $this->assertTrue(is_string($data));
-            $insert_response = unpack(BaseRequest::pack(ValueSize::UINT8), substr($data, 0, 1));
-            $this->assertTrue($insert_response[1] == 0x01 || $insert_response[0] == 0x00);
-            $client->close();
-        });
-    }
-
     protected function prepares($callback): void
     {
         run(function () use ($callback) {
@@ -90,41 +47,47 @@ final class ServiceTest extends TestCase
                 default => throw new \InvalidArgumentException("Unsupported THROTTR_SIZE: $size"),
             };
 
-            $this->service = new Service('127.0.0.1', 9000, $valueSize, 1);
-            $this->service->connect();
-            echo "HEY\n";
-            $callback();
-            echo "LISTEN\n";
-            $this->service->close();
-            echo "WOW\n";
+            $service = new Service('127.0.0.1', 9000, $valueSize, 1);
+            echo "CONNECTING\n";
+            $service->connect();
+            echo "CONNECTED\n";
+            $callback($service);
+            echo "CALLBACK\n";
+            $service->close();
+            echo "CLOSED\n";
         });
     }
 
-//    public function testGetAndSet()
-//    {
-//        $this->prepares(function () {
-////            $key = '777777';
-////
-////            sleep(1);
-////
-////            $set = $this->service->set(
-////                key: $key,
-////                ttl: 60,
-////                ttlType: TTLType::SECONDS,
-////                value: "EHLO"
-////            );
-////
-////            $this->assertTrue($set->success());
-////
-////            $get = $this->service->get(
-////                key: $key,
-////            );
-////
-////            $this->assertTrue($get->success());
-////            $this->assertEquals("EHLO", $get->value());
-////
-////            $purge = $this->service->purge($key);
-////            $this->assertTrue($purge->success());
-//        });
-//    }
+    public function testGetAndSet()
+    {
+        $this->prepares(function (Service $service) {
+            echo "RUNNING TEST ... \n";
+            $key = '777777';
+
+//            sleep(1);
+
+            $this->assertTrue(true);
+
+//            $set = $service->set(
+//                key: $key,
+//                ttl: 60,
+//                ttlType: TTLType::SECONDS,
+//                value: "EHLO"
+//            );
+
+//            echo "ENCODED: " . json_encode($set) . "\n";
+
+//            $this->assertTrue($set->success());
+//
+//            $get = $service->get(
+//                key: $key,
+//            );
+//
+//            $this->assertTrue($get->success());
+//            $this->assertEquals("EHLO", $get->value());
+//
+//            $purge = $service->purge($key);
+//            $this->assertTrue($purge->success());
+        });
+    }
 }

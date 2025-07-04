@@ -116,15 +116,9 @@ final class Service
         $index = $this->roundRobinIndex;
         $this->roundRobinIndex = ($this->roundRobinIndex + 1) % count($this->connections);
 
+        /** @var Connection $connection */
         $connection = $this->connections[$index];
 
-        $chan = $connection->send(is_array($requests) ? $requests : [$requests]);
-        $res = $chan->pop();
-
-        if ($res instanceof \Throwable) {
-            throw $res;
-        }
-
-        return $res;
+        return $connection->send(is_array($requests) ? $requests : [$requests]);
     }
 }
