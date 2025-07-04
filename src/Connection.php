@@ -17,230 +17,186 @@
 
 namespace Throttr\SDK;
 
+use Co;
 use SplQueue;
+use Swoole\Coroutine\Client;
+use Swoole\Coroutine\Channel;
 use Throttr\SDK\Enum\RequestType;
 use Throttr\SDK\Enum\ValueSize;
 use Throttr\SDK\Exceptions\ConnectionException;
 use Throttr\SDK\Exceptions\ProtocolException;
 use Throttr\SDK\Requests\BaseRequest;
+use Throwable;
 
 /**
- * Connection
+ * Connection (Swoole async, con centralización de lectura segura)
  */
 class Connection
 {
-    /**
-     * Socket
-     *
-     * @var resource|null
-     */
-    private $socket;
-
-    /**
-     * Queue
-     *
-     * @var SplQueue
-     */
-    private SplQueue $queue;
-
-    /**
-     * Busy
-     *
-     * @var bool
-     */
-    private bool $busy = false;
-
-    /**
-     * Value size
-     *
-     * @var ValueSize
-     */
+    private Client $client;
     private ValueSize $size;
+    private Channel $queue;
+    private Channel $pendingChannels;
+    private bool $connected = false;
 
-    /**
-     * Constructor
-     *
-     * @param string $host
-     * @param int    $port
-     * @param ValueSize    $size
-     */
+    private array $tasks = [];
+
     public function __construct(string $host, int $port, ValueSize $size)
     {
         $this->size = $size;
+        $this->client = new Client(SWOOLE_SOCK_TCP);
 
-        $address = "tcp://{$host}:{$port}";
-        $this->socket = @stream_socket_client(
-            $address,
-            $errno,
-            $errstr,
-            5.0,
-            STREAM_CLIENT_CONNECT
-        );
-
-        if (!$this->socket) {
-            throw new ConnectionException("Failed to connect to {$address}: {$errstr} ({$errno})"); // @codeCoverageIgnore
+        if (!$this->client->connect($host, $port, 5.0)) {
+            throw new ConnectionException("Failed to connect to {$host}:{$port} ({$this->client->errCode})");
         }
 
-        stream_set_timeout($this->socket, 5);
+        $this->connected = true;
+        $this->queue = new Channel(1024);
+        $this->pendingChannels = new Channel(1024);
 
-        $rawSocket = @socket_import_stream($this->socket);
-        @socket_set_option($rawSocket, SOL_TCP, TCP_NODELAY, 1);
-
-        $this->queue = new SplQueue();
+        $this->tasks = [
+            go(fn() => $this->processQueue()),
+            go(fn() => $this->processResponses()),
+        ];
     }
 
-    /**
-     * Send request
-     *
-     * @param array $requests
-     * @return array
-     */
     public function send(array $requests): array
     {
+        echo "SENDING \n";
         $buffer = '';
         $operations = [];
 
-        /** @var BaseRequest $request */
         foreach ($requests as $request) {
             $buffer .= $request->toBytes($this->size);
             $operations[] = $request->type;
         }
 
-        $pending = new PendingWrite($buffer, $operations);
-
-        $this->queue->enqueue($pending);
-
-        return $this->processQueue();
+        echo "CHANNEL CREATED \n";
+        $channel = new Channel(1);
+        $this->queue->push([$buffer, $operations, $channel]);
+        echo "CHANNEL PUSHED WAITING FOR RESPONSE \n";
+        $result = $channel->pop();
+        $exitChannel = $channel->close();
+        echo "CHANNEL EXIT: {$exitChannel}\n";
+        return $result;
     }
 
-    /**
-     * Process queue
-     *
-     * @return array
-     */
-    private function processQueue(): array
+    private function processQueue(): void
     {
-        if ($this->busy || $this->queue->isEmpty()) {
-            throw new ConnectionException('No request to process or connection is busy.'); // @codeCoverageIgnore
+        while (!$this->client->connected) {
+            echo "NOT CONNECTED YET (processQueue) \n";
+            Co::sleep(1);
         }
 
-        /** @var PendingWrite $pending */
-        $pending = $this->queue->dequeue();
+        while ($this->connected) {
+            echo "JOB RETRIEVING \n";
+            $job = $this->queue->pop(3);
 
-        $this->busy = true;
-
-        try {
-            $written = fwrite($this->socket, $pending->buffer());
-            if ($written === false || $written !== strlen($pending->buffer())) {
-                throw new ConnectionException('Failed to write complete data to socket.'); // @codeCoverageIgnore
+            if ($job === false) {
+                echo "CLIENT QUEUE CLOSED: {$this->client->errCode}::{$this->client->errMsg} \n";
+                echo "QUEUE CLOSED\n";
+                break;
             }
 
-            $responseBytes = fread($this->socket, count($pending->operations));
-            if ($responseBytes === false) {
-                throw new ConnectionException('Failed to read response payload.'); // @codeCoverageIgnore
+            try {
+                $written = $this->client->send($job[0]);
+                if ($written === false || $written !== strlen($job[0])) {
+                    throw new ConnectionException("Failed to write complete data to socket.");
+                }
+                $this->pendingChannels->push([$job[1], $job[2]]);
+            } catch (Throwable $e) {
+                echo "SOMETHING WENT WRONG {$e->getMessage()} {$e->getFile()}::{$e->getLine()} \n";
+                $job[2]->push($e);
+            }
+        }
+
+        echo "COROUTINE QUEUE CLOSED\n";
+    }
+
+    private function processResponses(): void
+    {
+        while (!$this->client->connected) {
+            echo "NOT CONNECTED YET (processResponses) \n";
+            Co::sleep(1);
+        }
+
+        while ($this->connected) {
+            echo "PENDING CHANNELS SHIFTING \n";
+            $result = $this->pendingChannels->pop(3);
+            echo "CHANNEL SHIFT WITH RESPONSE \n";
+
+            if ($result === false) {
+                echo "PENDING CHANNELS CLOSED\n";
+                echo "PENDING CHANNELS CLOSED: {$this->client->errCode}::{$this->client->errMsg} \n";
+                break;
             }
 
-            return $this->processResponses($pending, $responseBytes);
-        } finally {
-            $this->busy = false;
-        }
-    }
+            $responses = [];
 
-    /**
-     * Process responses
-     *
-     * @param PendingWrite $pending
-     * @param string $responseBytes
-     * @return array
-     */
-    private function processResponses(PendingWrite $pending, string $responseBytes): array
-    {
-        $responses = [];
-        $offset = 0;
+            try {
+                $data = $this->client->recv();
+                echo "RECEIVED: " . bin2hex($data) . "\n";
 
-        foreach ($pending->operations as $operation) {
-            $responses[] = match ($operation) {
-                RequestType::INSERT, RequestType::UPDATE, RequestType::PURGE, RequestType::SET => $this->handleStatusResponse($responseBytes, $offset, $operation),
-                RequestType::QUERY, RequestType::GET => $this->handlePayloadResponse($responseBytes, $offset, $operation),
-                default => throw new ProtocolException("Unknown operation type: $operation->value"), // @codeCoverageIgnore
-            };
+                foreach ($result[0] as $operation) {
+                    /* @var RequestType $operation */
+                    echo "OPERATION: " . $operation->value . "\n";
+                    $responses[] = match ($operation) {
+                        RequestType::INSERT, RequestType::UPDATE, RequestType::PURGE, RequestType::SET =>
+                        $this->handleStatusResponse($data, $operation),
 
-            $offset++;
-        }
+                        RequestType::QUERY, RequestType::GET =>
+                        $this->handlePayloadResponse($data, $operation),
 
-        return $responses;
-    }
+                        default => throw new ProtocolException("Unknown operation type: {$operation->value}"),
+                    };
+                }
+                $encodes = [];
+                foreach ($responses as $response) {
+                    $encodes[] = json_encode($response->success());
+                }
 
-    /**
-     * Handle simple response
-     *
-     * @param string $responseBytes
-     * @param int $offset
-     * @param RequestType $operation
-     * @return Response
-     */
-    private function handleStatusResponse(string $responseBytes, int $offset, RequestType $operation): Response
-    {
-        return Response::fromBytes($responseBytes[$offset], $this->size, $operation);
-    }
+                echo "RESPONSES: " . json_encode($encodes) . "\n";
 
-    /**
-     * Handle full response
-     *
-     * @param string $responseBytes
-     * @param int $offset
-     * @param RequestType $operation
-     * @return Response
-     */
-    private function handlePayloadResponse(string &$responseBytes, int &$offset, RequestType $operation): Response
-    {
-        if (ord($responseBytes[$offset]) === 0x00) {
-            return Response::fromBytes($responseBytes[$offset], $this->size, $operation);
-        }
-
-        $pendingBufferLength = $this->size->value * 2 + 1;
-
-        $scopeBytes = fread($this->socket, $pendingBufferLength);
-
-        if ($scopeBytes === false) {
-            throw new ConnectionException('Failed to read full response payload.'); // @codeCoverageIgnore
-        }
-
-        $responseBytes .= $scopeBytes;
-
-        if (RequestType::GET->value === $operation->value) {
-            $valueBufferLength = unpack(BaseRequest::pack($this->size), substr($responseBytes, strlen($responseBytes) - $this->size->value, $this->size->value))[1];
-            $valueBytes = fread($this->socket, $valueBufferLength);
-
-            if ($valueBytes === false) {
-                throw new ConnectionException('Failed to read full response payload.'); // @codeCoverageIgnore
+                $result[1]->push($responses);
+            } catch (Throwable $e) {
+                echo "SOMETHING WENT WRONG {$e->getMessage()} {$e->getFile()}::{$e->getLine()} \n";
+                $result[1]->push($e);
             }
-
-            $responseBytes .= $valueBytes;
-
-            $pendingBufferLength += $valueBufferLength;
         }
-
-        $response = Response::fromBytes(
-            substr($responseBytes, $offset, $pendingBufferLength + 1),
-            $this->size,
-            $operation
-        );
-
-        $offset += $pendingBufferLength;
-        return $response;
+        echo "COROUTINE RESPONSES CLOSED\n";
     }
 
-    /**
-     * Close connection
-     *
-     * @return void
-     */
+    private function handleStatusResponse(string $status, RequestType $operation): Response
+    {
+        return Response::fromBytes($status, $this->size, $operation);
+    }
+
+    private function handlePayloadResponse(string $status, RequestType $operation): Response
+    {
+        $payload = $status;
+
+//        if ($operation === RequestType::GET) {
+//            $valueLength = unpack(BaseRequest::pack($this->size), substr($scope, -$this->size->value))[1];
+//            $value = $this->recvExact($valueLength);
+//            $payload .= $value;
+//        }
+
+        return Response::fromBytes($payload, $this->size, $operation);
+    }
+
     public function close(): void
     {
-        if ($this->socket) {
-            fclose($this->socket);
-            $this->socket = null;
+        if ($this->connected) {
+            echo "CLOSING ON CONNECTION \n";
+            $this->connected = false;
+            $exitCodeClient = $this->client->close();
+            $exitCodeQueue = $this->queue->close();
+            $exitCodePending = $this->pendingChannels->close();
+            $exitCodeJoin = Co::join($this->tasks);
+            echo "CLOSED ON CONNECTION \n";
+            echo "EXITS: {$exitCodeJoin} {$exitCodePending} {$exitCodeQueue} {$exitCodeClient} \n";
+            echo "WTF: {$this->pendingChannels->length()}\n";
+            echo "WTF: {$this->queue->length()}\n";
         }
     }
 }

@@ -25,7 +25,6 @@
 
     <coverage>
         <report>
-            <text outputFile="php://stdout" showUncoveredFiles="true"/>
             <html outputDirectory="coverage-html"/>
         </report>
     </coverage>

@@ -100,6 +100,7 @@ final class Response
 
         $success = (ord($data[0]) === 1);
         if ($length === 1) {
+            echo "RETURNED STATUS SUCCESS \n";
             return new Response(success: $success);
         } else {
             $valueSize = $size->value;
