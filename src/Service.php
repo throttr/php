@@ -45,10 +45,6 @@ final class Service
 
     public function __construct(string $host, int $port, ValueSize $size, int $maxConnections)
     {
-        if ($maxConnections <= 0) {
-            throw new \InvalidArgumentException('maxConnections must be greater than 0.');
-        }
-
         $this->host = $host;
         $this->port = $port;
         $this->size = $size;
@@ -109,10 +105,6 @@ final class Service
 
     public function send(BaseRequest|array $requests): Response|array
     {
-        if (empty($this->connections)) {
-            throw new ServiceException('No available connections.');
-        }
-
         $index = $this->roundRobinIndex;
         $this->roundRobinIndex = ($this->roundRobinIndex + 1) % count($this->connections);
 

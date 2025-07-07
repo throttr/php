@@ -46,9 +46,7 @@ class Connection
         $this->size = $size;
         $this->client = new Client(SWOOLE_SOCK_TCP);
 
-        if (!$this->client->connect($host, $port, 5.0)) {
-            throw new ConnectionException("Failed to connect to {$host}:{$port} ({$this->client->errCode})");
-        }
+        $this->client->connect($host, $port, 5.0);
 
         $this->connected = true;
         $this->queue = new Channel(1024);
