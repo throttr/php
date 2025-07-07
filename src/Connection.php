@@ -23,24 +23,60 @@ use Swoole\Coroutine\Client;
 use Swoole\Coroutine\Channel;
 use Throttr\SDK\Enum\RequestType;
 use Throttr\SDK\Enum\ValueSize;
-use Throttr\SDK\Exceptions\ConnectionException;
-use Throttr\SDK\Exceptions\ProtocolException;
-use Throttr\SDK\Requests\BaseRequest;
-use Throwable;
 
 /**
  * Connection (Swoole async, con centralización de lectura segura)
  */
 class Connection
 {
+    /**
+     * Client
+     *
+     * @var Client
+     */
     private Client $client;
+
+    /**
+     * Value size
+     *
+     * @var ValueSize
+     */
     private ValueSize $size;
+
+    /**
+     * Queue
+     *
+     * @var Channel
+     */
     private Channel $queue;
+
+    /**
+     * Pending channels
+     *
+     * @var Channel
+     */
     private Channel $pendingChannels;
-    private bool $connected = false;
 
-    private array $tasks = [];
+    /**
+     * Connected
+     * @var bool
+     */
+    private bool $connected;
 
+    /**
+     * Tasks
+     *
+     * @var array
+     */
+    private array $tasks;
+
+    /**
+     * Constructor
+     *
+     * @param string $host
+     * @param int $port
+     * @param ValueSize $size
+     */
     public function __construct(string $host, int $port, ValueSize $size)
     {
         $this->size = $size;
@@ -58,6 +94,12 @@ class Connection
         ];
     }
 
+    /**
+     * Send
+     *
+     * @param array $requests
+     * @return array
+     */
     public function send(array $requests): array
     {
         $buffer = '';
@@ -75,6 +117,11 @@ class Connection
         return $result;
     }
 
+    /**
+     * Process queue
+     *
+     * @return void
+     */
     private function processQueue(): void
     {
         while ($this->connected) {
@@ -89,6 +136,11 @@ class Connection
         }
     }
 
+    /**
+     * Process responses
+     *
+     * @return void
+     */
     private function processResponses(): void
     {
         while ($this->connected) {
@@ -113,11 +165,25 @@ class Connection
         }
     }
 
+    /**
+     * Handle status response
+     *
+     * @param string $status
+     * @param RequestType $operation
+     * @return Response
+     */
     private function handleStatusResponse(string $status, RequestType $operation): Response
     {
         return Response::fromBytes($status, $this->size, $operation);
     }
 
+    /**
+     * Handle payload response
+     *
+     * @param string $status
+     * @param RequestType $operation
+     * @return Response
+     */
     private function handlePayloadResponse(string $status, RequestType $operation): Response
     {
         $payload = $status;
@@ -125,6 +191,11 @@ class Connection
         return Response::fromBytes($payload, $this->size, $operation);
     }
 
+    /**
+     * Close
+     *
+     * @return void
+     */
     public function close(): void
     {
         if ($this->connected) {

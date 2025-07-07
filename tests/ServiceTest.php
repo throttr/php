@@ -15,11 +15,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use Swoole\Coroutine\Client;
 use Throttr\SDK\Enum\AttributeType;
 use Throttr\SDK\Enum\ChangeType;
-use Throttr\SDK\Requests\BaseRequest;
-use Throttr\SDK\Requests\InsertRequest;
 use Throttr\SDK\Service;
 use function Swoole\Coroutine\run;
 use Throttr\SDK\Enum\TTLType;
@@ -53,7 +50,7 @@ final class ServiceTest extends TestCase
         });
     }
 
-    public function testCompatibility()
+    public function testProtocolCompatibility()
     {
         $this->prepares(function (Service $service) {
             $key = '333333';
@@ -134,7 +131,11 @@ final class ServiceTest extends TestCase
 
             $queryFinal = $service->query($key);
             $this->assertFalse($queryFinal->success());
+        });
+    }
 
+    public function testGetAndSet() {
+        $this->prepares(function (Service $service) {
             $key = '777777';
 
             $this->assertTrue(true);
@@ -157,7 +158,11 @@ final class ServiceTest extends TestCase
 
             $purge = $service->purge($key);
             $this->assertTrue($purge->success());
+        });
+    }
 
+    public function testUpdate() {
+        $this->prepares(function (Service $service) {
             $key = 'someone';
 
             $insertResponse = $service->insert(
