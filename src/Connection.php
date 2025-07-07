@@ -113,8 +113,12 @@ class Connection
         }
 
         $channel = new Channel(1);
-        $this->queue->push([$buffer, $operations, $channel]);
-        $result = $channel->pop();
+        $this->queue->push([
+            "buffer" => $buffer,
+            "operations" => $operations,
+            "channel" => $channel
+        ]);
+        $result = $channel->pop(60);
         $channel->close();
         return $result;
     }
@@ -133,8 +137,11 @@ class Connection
                 break;
             }
 
-            $this->client->send($job[0]);
-            $this->pendingChannels->push([$job[1], $job[2]]);
+            $this->client->send($job["buffer"]);
+            $this->pendingChannels->push([
+                "operations" => $job["operations"],
+                "channel" => $job["channel"]
+            ]);
         }
     }
 
@@ -145,23 +152,49 @@ class Connection
      */
     private function processResponses(): void
     {
+        $buffer = '';
+        $currentResult = null;
+        $pendingOperations = [];
+        $resolvedResponses = [];
+
         while ($this->connected) {
-            $result = $this->pendingChannels->pop(60);
-
-            $responses = [];
-
-            $data = $this->client->recv();
-
-            foreach ($result[0] as $operation) {
-                /* @var RequestType $operation */
-                $responses[] = match ($operation) {
-                    RequestType::INSERT, RequestType::UPDATE, RequestType::PURGE, RequestType::SET => StatusResponse::fromBytes($data, $this->size),
-                    RequestType::QUERY => QueryResponse::fromBytes($data, $this->size),
-                    RequestType::GET => GetResponse::fromBytes($data, $this->size),
-                };
+            if ($currentResult === null) {
+                $currentResult = $this->pendingChannels->pop(60);
+                $pendingOperations = $currentResult["operations"];
+                $resolvedResponses = [];
             }
 
-            $result[1]->push($responses);
+            $buffer .= $this->client->recv(60); // Leer más datos y acumular
+
+
+            while (!empty($pendingOperations)) {
+                $operation = $pendingOperations[0];
+                $response = match ($operation) {
+                    RequestType::INSERT, RequestType::UPDATE, RequestType::PURGE, RequestType::SET => StatusResponse::fromBytes($buffer, $this->size),
+                    RequestType::QUERY => QueryResponse::fromBytes($buffer, $this->size),
+                    RequestType::GET => GetResponse::fromBytes($buffer, $this->size),
+                };
+
+                if ($response === null) {
+                    break;
+                }
+
+                array_shift($pendingOperations);
+
+                $resolvedResponses[] = $response;
+            }
+
+            if (empty($pendingOperations) && $currentResult !== null) {
+
+                /* @var Channel $channel */
+                $channel = $currentResult["channel"];
+
+                $channel->push($resolvedResponses);
+
+                $buffer = "";
+                $currentResult = null;
+                $resolvedResponses = [];
+            }
         }
     }
 

@@ -51,4 +51,9 @@ enum RequestType: int
      * Get
      */
     case GET = 0x06;
+
+    /**
+     * LIST
+     */
+    case LIST = 0x07;
 }
