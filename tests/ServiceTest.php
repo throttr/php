@@ -53,7 +53,7 @@ final class ServiceTest extends TestCase
     public function testProtocolCompatibility()
     {
         $this->prepares(function (Service $service) {
-            $key = '333333';
+            $key = 'TEST-PROTOCOL-COMPATIBILITY';
 
             $insert = $service->insert(
                 key: $key,
@@ -134,60 +134,70 @@ final class ServiceTest extends TestCase
         });
     }
 
-//    public function testGetAndSet() {
-//        $this->prepares(function (Service $service) {
-//            $key = '777777';
-//
-//            $this->assertTrue(true);
-//
-//            $set = $service->set(
-//                key: $key,
-//                ttl: 60,
-//                ttlType: TTLType::SECONDS,
-//                value: "EHLO"
-//            );
-//
-//            $this->assertTrue($set->status);
-//
-//            $get = $service->get(
-//                key: $key,
-//            );
-//
-//            $this->assertTrue($get->status);
-//            $this->assertEquals("EHLO", $get->value);
-//
-//            $purge = $service->purge($key);
-//            $this->assertTrue($purge->status);
-//        });
-//    }
-//
-//    public function testUpdate() {
-//        $this->prepares(function (Service $service) {
-//            $key = 'someone';
-//
-//            $insertResponse = $service->insert(
-//                key: $key,
-//                ttl: 3,
-//                ttlType: TTLType::SECONDS,
-//                quota: 10,
-//            );
-//
-//            $this->assertTrue($insertResponse->status, 'Insert should be successful');
-//
-//            $updateResponse = $service->update(
-//                key: $key,
-//                attribute: AttributeType::QUOTA,
-//                change: ChangeType::INCREASE,
-//                value: 5
-//            );
-//
-//            $this->assertTrue($updateResponse->status, 'Update should be successful');
-//
-//            $purgeResponse = $service->purge(
-//                key: $key,
-//            );
-//
-//            $this->assertTrue($purgeResponse->status, 'Purge should be successful');
-//        });
-//    }
+    public function testGetAndSet() {
+        $this->prepares(function (Service $service) {
+            $key = 'TEST-GET-AND-SET';
+
+            $set = $service->set(
+                key: $key,
+                ttl: 60,
+                ttlType: TTLType::SECONDS,
+                value: "EHLO"
+            );
+
+            $this->assertTrue($set->status);
+
+            $get = $service->get(
+                key: $key,
+            );
+
+            $this->assertTrue($get->status);
+            $this->assertEquals("EHLO", $get->value);
+
+            $purge = $service->purge($key);
+            $this->assertTrue($purge->status);
+
+            $get = $service->get(
+                key: $key,
+            );
+
+            $this->assertFalse($get->status);
+        });
+    }
+
+    public function testUpdate() {
+        $this->prepares(function (Service $service) {
+            $key = 'TEST-UPDATE';
+
+            $insertResponse = $service->insert(
+                key: $key,
+                ttl: 3,
+                ttlType: TTLType::SECONDS,
+                quota: 10,
+            );
+
+            $this->assertTrue($insertResponse->status);
+
+            $updateResponse = $service->update(
+                key: $key,
+                attribute: AttributeType::QUOTA,
+                change: ChangeType::INCREASE,
+                value: 5
+            );
+
+            $this->assertTrue($updateResponse->status);
+
+            $purgeResponse = $service->purge(
+                key: $key,
+            );
+
+            $this->assertTrue($purgeResponse->status);
+
+            $get = $service->get(
+                key: $key,
+            );
+
+            $this->assertFalse($get->status);
+        });
+    }
 }

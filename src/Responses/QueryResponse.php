@@ -32,13 +32,18 @@ class QueryResponse extends Response implements IResponse {
         $valueSize = $size->value;
         $offset = 0;
         $status = ord($data[$offset]) === 1;
-        $offset++;
-        $quota = unpack(BaseRequest::pack($size), substr($data, $offset, $valueSize))[1];
-        $offset += $size->value;
-        $ttl_type = TTLType::from(ord($data[$offset]));
-        $offset ++;
-        $ttl = unpack(BaseRequest::pack($size), substr($data, $offset, $valueSize))[1];
-        return new QueryResponse($data, $status, $quota, $ttl_type, $ttl);
+
+        if ($status) {
+            $offset++;
+            $quota = unpack(BaseRequest::pack($size), substr($data, $offset, $valueSize))[1];
+            $offset += $size->value;
+            $ttl_type = TTLType::from(ord($data[$offset]));
+            $offset ++;
+            $ttl = unpack(BaseRequest::pack($size), substr($data, $offset, $valueSize))[1];
+            return new QueryResponse($data, true, $quota, $ttl_type, $ttl);
+        }
+
+        return new QueryResponse($data, false, 0, TTLType::NANOSECONDS, 0);
     }
 }
 

@@ -33,14 +33,19 @@ class GetResponse extends Response implements IResponse {
         $offset = 0;
         $status = ord($data[$offset]) === 1;
         $offset++;
-        $ttl_type = TTLType::from(ord($data[$offset]));
-        $offset++;
-        $ttl = unpack(BaseRequest::pack($size), substr($data, $offset, $valueSize))[1];
-        $offset += $valueSize;
-        $value_sized = unpack(BaseRequest::pack($size), substr($data, $offset, $valueSize))[1];
-        $offset += $valueSize;
-        $value = substr($data, $offset, $value_sized);
-        return new GetResponse($data, $status, $ttl_type, $ttl, $value);
+
+        if ($status) {
+            $ttl_type = TTLType::from(ord($data[$offset]));
+            $offset++;
+            $ttl = unpack(BaseRequest::pack($size), substr($data, $offset, $valueSize))[1];
+            $offset += $valueSize;
+            $value_sized = unpack(BaseRequest::pack($size), substr($data, $offset, $valueSize))[1];
+            $offset += $valueSize;
+            $value = substr($data, $offset, $value_sized);
+            return new GetResponse($data, true, $ttl_type, $ttl, $value);
+        }
+
+        return new GetResponse($data, false, TTLType::NANOSECONDS, 0, "");
     }
 }
 
