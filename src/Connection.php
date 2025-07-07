@@ -62,7 +62,6 @@ class Connection
 
     public function send(array $requests): array
     {
-        echo "SENDING \n";
         $buffer = '';
         $operations = [];
 
@@ -71,30 +70,23 @@ class Connection
             $operations[] = $request->type;
         }
 
-        echo "CHANNEL CREATED \n";
         $channel = new Channel(1);
         $this->queue->push([$buffer, $operations, $channel]);
-        echo "CHANNEL PUSHED WAITING FOR RESPONSE \n";
         $result = $channel->pop();
-        $exitChannel = $channel->close();
-        echo "CHANNEL EXIT: {$exitChannel}\n";
+        $channel->close();
         return $result;
     }
 
     private function processQueue(): void
     {
         while (!$this->client->connected) {
-            echo "NOT CONNECTED YET (processQueue) \n";
             Co::sleep(1);
         }
 
         while ($this->connected) {
-            echo "JOB RETRIEVING \n";
             $job = $this->queue->pop(3);
 
             if ($job === false) {
-                echo "CLIENT QUEUE CLOSED: {$this->client->errCode}::{$this->client->errMsg} \n";
-                echo "QUEUE CLOSED\n";
                 break;
             }
 
@@ -105,29 +97,21 @@ class Connection
                 }
                 $this->pendingChannels->push([$job[1], $job[2]]);
             } catch (Throwable $e) {
-                echo "SOMETHING WENT WRONG {$e->getMessage()} {$e->getFile()}::{$e->getLine()} \n";
                 $job[2]->push($e);
             }
         }
-
-        echo "COROUTINE QUEUE CLOSED\n";
     }
 
     private function processResponses(): void
     {
         while (!$this->client->connected) {
-            echo "NOT CONNECTED YET (processResponses) \n";
             Co::sleep(1);
         }
 
         while ($this->connected) {
-            echo "PENDING CHANNELS SHIFTING \n";
             $result = $this->pendingChannels->pop(3);
-            echo "CHANNEL SHIFT WITH RESPONSE \n";
 
             if ($result === false) {
-                echo "PENDING CHANNELS CLOSED\n";
-                echo "PENDING CHANNELS CLOSED: {$this->client->errCode}::{$this->client->errMsg} \n";
                 break;
             }
 
@@ -135,11 +119,9 @@ class Connection
 
             try {
                 $data = $this->client->recv();
-                echo "RECEIVED: " . bin2hex($data) . "\n";
 
                 foreach ($result[0] as $operation) {
                     /* @var RequestType $operation */
-                    echo "OPERATION: " . $operation->value . "\n";
                     $responses[] = match ($operation) {
                         RequestType::INSERT, RequestType::UPDATE, RequestType::PURGE, RequestType::SET =>
                         $this->handleStatusResponse($data, $operation),
@@ -150,20 +132,12 @@ class Connection
                         default => throw new ProtocolException("Unknown operation type: {$operation->value}"),
                     };
                 }
-                $encodes = [];
-                foreach ($responses as $response) {
-                    $encodes[] = json_encode($response->success());
-                }
-
-                echo "RESPONSES: " . json_encode($encodes) . "\n";
 
                 $result[1]->push($responses);
             } catch (Throwable $e) {
-                echo "SOMETHING WENT WRONG {$e->getMessage()} {$e->getFile()}::{$e->getLine()} \n";
                 $result[1]->push($e);
             }
         }
-        echo "COROUTINE RESPONSES CLOSED\n";
     }
 
     private function handleStatusResponse(string $status, RequestType $operation): Response
@@ -187,16 +161,11 @@ class Connection
     public function close(): void
     {
         if ($this->connected) {
-            echo "CLOSING ON CONNECTION \n";
             $this->connected = false;
-            $exitCodeClient = $this->client->close();
-            $exitCodeQueue = $this->queue->close();
-            $exitCodePending = $this->pendingChannels->close();
-            $exitCodeJoin = Co::join($this->tasks);
-            echo "CLOSED ON CONNECTION \n";
-            echo "EXITS: {$exitCodeJoin} {$exitCodePending} {$exitCodeQueue} {$exitCodeClient} \n";
-            echo "WTF: {$this->pendingChannels->length()}\n";
-            echo "WTF: {$this->queue->length()}\n";
+            $this->client->close();
+            $this->queue->close();
+            $this->pendingChannels->close();
+            Co::join($this->tasks);
         }
     }
 }
