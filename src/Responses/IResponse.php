@@ -14,7 +14,7 @@ interface IResponse
      *
      * @param string $data
      * @param ValueSize $size
-     * @return IResponse
+     * @return IResponse|null
      */
-    public static function fromBytes(string $data, ValueSize $size) : IResponse;
+    public static function fromBytes(string $data, ValueSize $size) : IResponse|null;
 }
