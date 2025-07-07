@@ -79,10 +79,6 @@ class Connection
 
     private function processQueue(): void
     {
-        while (!$this->client->connected) {
-            Co::sleep(1);
-        }
-
         while ($this->connected) {
             $job = $this->queue->pop(3);
 
@@ -90,53 +86,32 @@ class Connection
                 break;
             }
 
-            try {
-                $written = $this->client->send($job[0]);
-                if ($written === false || $written !== strlen($job[0])) {
-                    throw new ConnectionException("Failed to write complete data to socket.");
-                }
-                $this->pendingChannels->push([$job[1], $job[2]]);
-            } catch (Throwable $e) {
-                $job[2]->push($e);
-            }
+            $this->client->send($job[0]);
+            $this->pendingChannels->push([$job[1], $job[2]]);
         }
     }
 
     private function processResponses(): void
     {
-        while (!$this->client->connected) {
-            Co::sleep(1);
-        }
-
         while ($this->connected) {
-            $result = $this->pendingChannels->pop(3);
-
-            if ($result === false) {
-                break;
-            }
+            $result = $this->pendingChannels->pop(60);
 
             $responses = [];
 
-            try {
-                $data = $this->client->recv();
+            $data = $this->client->recv();
 
-                foreach ($result[0] as $operation) {
-                    /* @var RequestType $operation */
-                    $responses[] = match ($operation) {
-                        RequestType::INSERT, RequestType::UPDATE, RequestType::PURGE, RequestType::SET =>
-                        $this->handleStatusResponse($data, $operation),
+            foreach ($result[0] as $operation) {
+                /* @var RequestType $operation */
+                $responses[] = match ($operation) {
+                    RequestType::INSERT, RequestType::UPDATE, RequestType::PURGE, RequestType::SET =>
+                    $this->handleStatusResponse($data, $operation),
 
-                        RequestType::QUERY, RequestType::GET =>
-                        $this->handlePayloadResponse($data, $operation),
-
-                        default => throw new ProtocolException("Unknown operation type: {$operation->value}"),
-                    };
-                }
-
-                $result[1]->push($responses);
-            } catch (Throwable $e) {
-                $result[1]->push($e);
+                    RequestType::QUERY, RequestType::GET =>
+                    $this->handlePayloadResponse($data, $operation),
+                };
             }
+
+            $result[1]->push($responses);
         }
     }
 
@@ -148,12 +123,6 @@ class Connection
     private function handlePayloadResponse(string $status, RequestType $operation): Response
     {
         $payload = $status;
-
-//        if ($operation === RequestType::GET) {
-//            $valueLength = unpack(BaseRequest::pack($this->size), substr($scope, -$this->size->value))[1];
-//            $value = $this->recvExact($valueLength);
-//            $payload .= $value;
-//        }
 
         return Response::fromBytes($payload, $this->size, $operation);
     }
