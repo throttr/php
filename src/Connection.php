@@ -18,14 +18,16 @@
 namespace Throttr\SDK;
 
 use Co;
-use SplQueue;
 use Swoole\Coroutine\Client;
 use Swoole\Coroutine\Channel;
 use Throttr\SDK\Enum\RequestType;
 use Throttr\SDK\Enum\ValueSize;
+use Throttr\SDK\Responses\GetResponse;
+use Throttr\SDK\Responses\QueryResponse;
+use Throttr\SDK\Responses\StatusResponse;
 
 /**
- * Connection (Swoole async, con centralización de lectura segura)
+ * Connection
  */
 class Connection
 {
@@ -153,42 +155,14 @@ class Connection
             foreach ($result[0] as $operation) {
                 /* @var RequestType $operation */
                 $responses[] = match ($operation) {
-                    RequestType::INSERT, RequestType::UPDATE, RequestType::PURGE, RequestType::SET =>
-                    $this->handleStatusResponse($data, $operation),
-
-                    RequestType::QUERY, RequestType::GET =>
-                    $this->handlePayloadResponse($data, $operation),
+                    RequestType::INSERT, RequestType::UPDATE, RequestType::PURGE, RequestType::SET => StatusResponse::fromBytes($data, $this->size),
+                    RequestType::QUERY => QueryResponse::fromBytes($data, $this->size),
+                    RequestType::GET => GetResponse::fromBytes($data, $this->size),
                 };
             }
 
             $result[1]->push($responses);
         }
-    }
-
-    /**
-     * Handle status response
-     *
-     * @param string $status
-     * @param RequestType $operation
-     * @return Response
-     */
-    private function handleStatusResponse(string $status, RequestType $operation): Response
-    {
-        return Response::fromBytes($status, $this->size, $operation);
-    }
-
-    /**
-     * Handle payload response
-     *
-     * @param string $status
-     * @param RequestType $operation
-     * @return Response
-     */
-    private function handlePayloadResponse(string $status, RequestType $operation): Response
-    {
-        $payload = $status;
-
-        return Response::fromBytes($payload, $this->size, $operation);
     }
 
     /**

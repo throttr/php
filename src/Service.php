@@ -30,6 +30,10 @@ use Throttr\SDK\Requests\PurgeRequest;
 use Throttr\SDK\Requests\QueryRequest;
 use Throttr\SDK\Requests\SetRequest;
 use Throttr\SDK\Requests\UpdateRequest;
+use Throttr\SDK\Responses\GetResponse;
+use Throttr\SDK\Responses\IResponse;
+use Throttr\SDK\Responses\QueryResponse;
+use Throttr\SDK\Responses\StatusResponse;
 
 /**
  * Service
@@ -127,9 +131,9 @@ final class Service
      * @param int $ttl
      * @param TTLType $ttlType
      * @param int $quota
-     * @return Response
+     * @return StatusResponse
      */
-    public function insert(string $key, int $ttl, TTLType $ttlType, int $quota): Response
+    public function insert(string $key, int $ttl, TTLType $ttlType, int $quota): StatusResponse
     {
         $request = new InsertRequest($key, $quota, $ttlType, $ttl);
         return $this->send([$request])[0];
@@ -139,9 +143,9 @@ final class Service
      * QUERY
      *
      * @param string $key
-     * @return Response
+     * @return QueryResponse
      */
-    public function query(string $key): Response
+    public function query(string $key): QueryResponse
     {
         $request = new QueryRequest($key);
         return $this->send([$request])[0];
@@ -151,9 +155,9 @@ final class Service
      * PURGE
      *
      * @param string $key
-     * @return Response
+     * @return StatusResponse
      */
-    public function purge(string $key): Response
+    public function purge(string $key): StatusResponse
     {
         $request = new PurgeRequest($key);
         return $this->send([$request])[0];
@@ -166,9 +170,9 @@ final class Service
      * @param AttributeType $attribute
      * @param ChangeType $change
      * @param int $value
-     * @return Response
+     * @return StatusResponse
      */
-    public function update(string $key, AttributeType $attribute, ChangeType $change, int $value): Response
+    public function update(string $key, AttributeType $attribute, ChangeType $change, int $value): StatusResponse
     {
         $request = new UpdateRequest($attribute, $change, $value, $key);
         return $this->send([$request])[0];
@@ -181,9 +185,9 @@ final class Service
      * @param int $ttl
      * @param TTLType $ttlType
      * @param string $value
-     * @return Response
+     * @return StatusResponse
      */
-    public function set(string $key, int $ttl, TTLType $ttlType, string $value): Response
+    public function set(string $key, int $ttl, TTLType $ttlType, string $value): StatusResponse
     {
         $request = new SetRequest($key, $ttlType, $ttl, $value);
         return $this->send([$request])[0];
@@ -193,9 +197,9 @@ final class Service
      * GET
      *
      * @param string $key
-     * @return Response
+     * @return GetResponse
      */
-    public function get(string $key): Response
+    public function get(string $key): GetResponse
     {
         $request = new GetRequest($key);
         return $this->send([$request])[0];
@@ -205,9 +209,9 @@ final class Service
      * Send
      *
      * @param BaseRequest|array $requests
-     * @return Response|array
+     * @return IResponse|array
      */
-    public function send(BaseRequest|array $requests): Response|array
+    public function send(BaseRequest|array $requests): IResponse|array
     {
         $index = $this->roundRobinIndex;
         $this->roundRobinIndex = ($this->roundRobinIndex + 1) % count($this->connections);
