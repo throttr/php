@@ -8,7 +8,7 @@ use Throttr\SDK\Enum\ValueSize;
 use Throttr\SDK\Requests\BaseRequest;
 
 /**
- * QueryResponse
+ * InfoResponse
  */
 class InfoResponse extends Response implements IResponse {
     /**
