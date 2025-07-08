@@ -26,12 +26,14 @@ use Throttr\SDK\Exceptions\ServiceException;
 use Throttr\SDK\Requests\BaseRequest;
 use Throttr\SDK\Requests\GetRequest;
 use Throttr\SDK\Requests\InsertRequest;
+use Throttr\SDK\Requests\ListRequest;
 use Throttr\SDK\Requests\PurgeRequest;
 use Throttr\SDK\Requests\QueryRequest;
 use Throttr\SDK\Requests\SetRequest;
 use Throttr\SDK\Requests\UpdateRequest;
 use Throttr\SDK\Responses\GetResponse;
 use Throttr\SDK\Responses\IResponse;
+use Throttr\SDK\Responses\ListResponse;
 use Throttr\SDK\Responses\QueryResponse;
 use Throttr\SDK\Responses\StatusResponse;
 
@@ -73,7 +75,7 @@ final class Service
      *
      * @var ValueSize
      */
-    private ValueSize $size;
+    public ValueSize $size;
 
     /**
      * Max connections
@@ -136,6 +138,12 @@ final class Service
     public function insert(string $key, int $ttl, TTLType $ttlType, int $quota): StatusResponse
     {
         $request = new InsertRequest($key, $quota, $ttlType, $ttl);
+        return $this->send([$request])[0];
+    }
+
+    public function list(): ListResponse
+    {
+        $request = new ListRequest();
         return $this->send([$request])[0];
     }
 

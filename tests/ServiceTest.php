@@ -17,6 +17,7 @@
 
 use Throttr\SDK\Enum\AttributeType;
 use Throttr\SDK\Enum\ChangeType;
+use Throttr\SDK\Enum\KeyType;
 use Throttr\SDK\Service;
 use function Swoole\Coroutine\run;
 use Throttr\SDK\Enum\TTLType;
@@ -40,7 +41,7 @@ final class ServiceTest extends TestCase
                 'uint16' => ValueSize::UINT16,
                 'uint32' => ValueSize::UINT32,
                 'uint64' => ValueSize::UINT64,
-                default => throw new \InvalidArgumentException("Unsupported THROTTR_SIZE: $size"),
+                default => throw new InvalidArgumentException("Unsupported THROTTR_SIZE: $size"),
             };
 
             $service = new Service('127.0.0.1', 9000, $valueSize, 1);
@@ -198,6 +199,77 @@ final class ServiceTest extends TestCase
             );
 
             $this->assertFalse($get->status);
+        });
+    }
+
+    public function testList() {
+        $this->prepares(function (Service $service) {
+            $key = 'LIST_KEY';
+            $list = $service->list();
+            $this->assertTrue($list->status);
+            $this->assertCount(0, $list->keys);
+
+            $service->insert(
+                key: $key,
+                ttl: 3,
+                ttlType: TTLType::SECONDS,
+                quota: 10,
+            );
+
+            $list = $service->list();
+
+            $this->assertTrue($list->status);
+            $this->assertCount(1, $list->keys);
+            $this->assertEquals($key, $list->keys[0]["key"]);
+            $this->assertEquals($service->size->value, $list->keys[0]["bytes_used"]);
+            $this->assertEquals(KeyType::COUNTER, $list->keys[0]["type"]);
+            $this->assertEquals(TTLType::SECONDS, $list->keys[0]["ttl_type"]);
+
+            $service->purge(
+                key: $key,
+            );
+
+            $list = $service->list();
+            $this->assertTrue($list->status);
+            $this->assertCount(0, $list->keys);
+        });
+    }
+
+    public function testFragmentedList() {
+        $this->prepares(function (Service $service) {
+            $list = $service->list();
+            $this->assertTrue($list->status);
+            $this->assertCount(0, $list->keys);
+
+            $keys = [];
+
+            for ($i = 0; $i < 1000; $i++) {
+                $key = "TEST_FRAGMENTED_LIST_$i";
+                $insertResponse = $service->insert(
+                    key: $key,
+                    ttl: 3,
+                    ttlType: TTLType::SECONDS,
+                    quota: 10,
+                );
+                $keys[] = $key;
+
+                $this->assertTrue($insertResponse->status);
+            }
+
+            $list = $service->list();
+
+            $this->assertTrue($list->status);
+            $this->assertCount(1000, $list->keys);
+
+            foreach ($keys as $key) {
+                $service->purge(
+                    key: $key,
+                );
+            }
+
+            $list = $service->list();
+            $this->assertTrue($list->status);
+            $this->assertCount(0, $list->keys);
         });
     }
 }
