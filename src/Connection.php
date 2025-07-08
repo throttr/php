@@ -23,6 +23,7 @@ use Swoole\Coroutine\Channel;
 use Throttr\SDK\Enum\RequestType;
 use Throttr\SDK\Enum\ValueSize;
 use Throttr\SDK\Responses\GetResponse;
+use Throttr\SDK\Responses\ListResponse;
 use Throttr\SDK\Responses\QueryResponse;
 use Throttr\SDK\Responses\StatusResponse;
 
@@ -173,6 +174,7 @@ class Connection
                     RequestType::INSERT, RequestType::UPDATE, RequestType::PURGE, RequestType::SET => StatusResponse::fromBytes($buffer, $this->size),
                     RequestType::QUERY => QueryResponse::fromBytes($buffer, $this->size),
                     RequestType::GET => GetResponse::fromBytes($buffer, $this->size),
+                    RequestType::LIST => ListResponse::fromBytes($buffer, $this->size),
                 };
 
                 if ($response === null) {

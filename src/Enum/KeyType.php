@@ -18,42 +18,17 @@
 namespace Throttr\SDK\Enum;
 
 /**
- * Request type
+ * Key type
  */
-enum RequestType: int
+enum KeyType: int
 {
     /**
-     * Insert
+     * Buffer
      */
-    case INSERT = 0x01;
+    case BUFFER = 0x01;
 
     /**
-     * Query
+     * Counter
      */
-    case QUERY = 0x02;
-
-    /**
-     * Update
-     */
-    case UPDATE = 0x03;
-
-    /**
-     * Purge
-     */
-    case PURGE = 0x04;
-
-    /**
-     * Set
-     */
-    case SET = 0x05;
-
-    /**
-     * Get
-     */
-    case GET = 0x06;
-
-    /**
-     * LIST
-     */
-    case LIST = 0x07;
+    case COUNTER = 0x00;
 }
