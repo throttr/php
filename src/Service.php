@@ -25,6 +25,7 @@ use Throttr\SDK\Enum\ValueSize;
 use Throttr\SDK\Exceptions\ServiceException;
 use Throttr\SDK\Requests\BaseRequest;
 use Throttr\SDK\Requests\GetRequest;
+use Throttr\SDK\Requests\InfoRequest;
 use Throttr\SDK\Requests\InsertRequest;
 use Throttr\SDK\Requests\ListRequest;
 use Throttr\SDK\Requests\PurgeRequest;
@@ -32,6 +33,7 @@ use Throttr\SDK\Requests\QueryRequest;
 use Throttr\SDK\Requests\SetRequest;
 use Throttr\SDK\Requests\UpdateRequest;
 use Throttr\SDK\Responses\GetResponse;
+use Throttr\SDK\Responses\InfoResponse;
 use Throttr\SDK\Responses\IResponse;
 use Throttr\SDK\Responses\ListResponse;
 use Throttr\SDK\Responses\QueryResponse;
@@ -141,9 +143,25 @@ final class Service
         return $this->send([$request])[0];
     }
 
+    /**
+     * LIST
+     *
+     * @return ListResponse
+     */
     public function list(): ListResponse
     {
         $request = new ListRequest();
+        return $this->send([$request])[0];
+    }
+
+    /**
+     * INFO
+     *
+     * @return InfoResponse
+     */
+    public function info(): InfoResponse
+    {
+        $request = new InfoRequest();
         return $this->send([$request])[0];
     }
 

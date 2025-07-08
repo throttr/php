@@ -272,4 +272,57 @@ final class ServiceTest extends TestCase
             $this->assertCount(0, $list->keys);
         });
     }
+
+    public function testInfo()
+    {
+        $this->prepares(function (Service $service) {
+            $info = $service->info();
+
+            $this->assertTrue($info->status);
+            $this->assertArrayHasKey("now", $info->attributes);
+            $this->assertArrayHasKey("total_requests", $info->attributes);
+            $this->assertArrayHasKey("total_requests_per_minute", $info->attributes);
+            $this->assertArrayHasKey("requests", $info->attributes);
+
+            foreach ([
+                         'INSERT',
+                         'QUERY',
+                         'UPDATE',
+                         'PURGE',
+                         'GET',
+                         'SET',
+                         'LIST',
+                         'INFO',
+                         'STATS',
+                         'STAT',
+                         'SUBSCRIBE',
+                         'UNSUBSCRIBE',
+                         'PUBLISH',
+                         'CHANNEL',
+                         'CHANNELS',
+                         'WHOAMI',
+                         'CONNECTION',
+                         'CONNECTIONS',
+                     ] as $type) {
+                $this->assertArrayHasKey($type, $info->attributes["requests"]);
+                $this->assertArrayHasKey("total", $info->attributes["requests"][$type]);
+                $this->assertArrayHasKey("per_minute", $info->attributes["requests"][$type]);
+            }
+
+            $this->assertArrayHasKey("total_read", $info->attributes);
+            $this->assertArrayHasKey("total_read_per_minute", $info->attributes);
+            $this->assertArrayHasKey("total_write", $info->attributes);
+            $this->assertArrayHasKey("total_write_per_minute", $info->attributes);
+            $this->assertArrayHasKey("total_keys", $info->attributes);
+            $this->assertArrayHasKey("total_counters", $info->attributes);
+            $this->assertArrayHasKey("total_buffers", $info->attributes);
+            $this->assertArrayHasKey("total_allocated_bytes_on_counters", $info->attributes);
+            $this->assertArrayHasKey("total_allocated_bytes_on_buffers", $info->attributes);
+            $this->assertArrayHasKey("total_subscriptions", $info->attributes);
+            $this->assertArrayHasKey("total_channels", $info->attributes);
+            $this->assertArrayHasKey("started_at", $info->attributes);
+            $this->assertArrayHasKey("total_connections", $info->attributes);
+            $this->assertArrayHasKey("version", $info->attributes);
+        });
+    }
 }
