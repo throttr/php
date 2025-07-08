@@ -56,4 +56,64 @@ enum RequestType: int
      * LIST
      */
     case LIST = 0x07;
+
+    /**
+     * INFO
+     */
+    case INFO = 0x08;
+
+    /**
+     * STAT
+     */
+    case STAT = 0x09;
+
+    /**
+     * STATS
+     */
+    case STATS = 0x10;
+
+    /**
+     * SUBSCRIBE
+     */
+    case SUBSCRIBE = 0x11;
+
+    /**
+     * UNSUBSCRIBE
+     */
+    case UNSUBSCRIBE = 0x12;
+
+    /**
+     * PUBLISH
+     */
+    case PUBLISH = 0x13;
+
+    /**
+     * CONNECTIONS
+     */
+    case CONNECTIONS = 0x14;
+
+    /**
+     * CONNECTION
+     */
+    case CONNECTION = 0x15;
+
+    /**
+     * CHANNELS
+     */
+    case CHANNELS = 0x16;
+
+    /**
+     * CHANNEL
+     */
+    case CHANNEL = 0x17;
+
+    /**
+     * WHOAMI
+     */
+    case WHOAMI = 0x18;
+
+    /**
+     * EVENT
+     */
+    case EVENT = 0x19;
 }
