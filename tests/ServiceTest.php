@@ -398,4 +398,34 @@ final class ServiceTest extends TestCase
         });
     }
 
+    public function testStat() {
+        $this->prepares(function (Service $service) {
+            $key = 'STAT_KEY';
+            $stat = $service->stat($key);
+            $this->assertFalse($stat->status);
+
+            $service->insert(
+                key: $key,
+                ttl: 3,
+                ttlType: TTLType::SECONDS,
+                quota: 10,
+            );
+
+            $stat = $service->stat($key);
+
+            $this->assertTrue($stat->status);
+            $this->assertEquals(0, $stat->attributes["reads_per_minute"]);
+            $this->assertEquals(0, $stat->attributes["writes_per_minute"]);
+            $this->assertEquals(0, $stat->attributes["total_reads"]);
+            $this->assertEquals(0, $stat->attributes["total_writes"]);
+
+            $service->purge(
+                key: $key,
+            );
+
+            $stats = $service->stat($key);
+            $this->assertFalse($stats->status);
+        });
+    }
+
 }

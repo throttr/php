@@ -18,34 +18,27 @@
 namespace Throttr\SDK\Requests;
 
 use Throttr\SDK\Enum\RequestType;
-use Throttr\SDK\Enum\TTLType;
 use Throttr\SDK\Enum\ValueSize;
 
 /**
- * Insert request
+ * Stat request
  */
-class InsertRequest extends BaseRequest
+class StatRequest extends BaseRequest
 {
     /**
      * Type
      *
      * @var RequestType
      */
-    public RequestType $type = RequestType::INSERT;
+    public RequestType $type = RequestType::STAT;
 
     /**
      * Constructor
      *
      * @param string $key
-     * @param int $quota
-     * @param TTLType $ttl_type
-     * @param int $ttl
      */
     public function __construct(
-        public string  $key,
-        public int     $quota,
-        public TTLType $ttl_type,
-        public int     $ttl
+        public string $key
     )
     {
     }
@@ -59,9 +52,6 @@ class InsertRequest extends BaseRequest
     public function toBytes(ValueSize $size): string
     {
         return pack(static::pack(ValueSize::UINT8), $this->type->value) .
-            pack(static::pack($size), $this->quota) .
-            pack(static::pack(ValueSize::UINT8), $this->ttl_type->value) .
-            pack(static::pack($size), $this->ttl) .
             pack(static::pack(ValueSize::UINT8), strlen($this->key)) .
             $this->key;
     }

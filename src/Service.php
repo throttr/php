@@ -31,6 +31,7 @@ use Throttr\SDK\Requests\ListRequest;
 use Throttr\SDK\Requests\PurgeRequest;
 use Throttr\SDK\Requests\QueryRequest;
 use Throttr\SDK\Requests\SetRequest;
+use Throttr\SDK\Requests\StatRequest;
 use Throttr\SDK\Requests\StatsRequest;
 use Throttr\SDK\Requests\UpdateRequest;
 use Throttr\SDK\Responses\GetResponse;
@@ -38,6 +39,7 @@ use Throttr\SDK\Responses\InfoResponse;
 use Throttr\SDK\Responses\IResponse;
 use Throttr\SDK\Responses\ListResponse;
 use Throttr\SDK\Responses\QueryResponse;
+use Throttr\SDK\Responses\StatResponse;
 use Throttr\SDK\Responses\StatsResponse;
 use Throttr\SDK\Responses\StatusResponse;
 
@@ -54,7 +56,7 @@ final class Service
     private array $connections = [];
 
     /**
-     * Round robin index
+     * Round-robin index
      *
      * @var int
      */
@@ -187,6 +189,18 @@ final class Service
     public function query(string $key): QueryResponse
     {
         $request = new QueryRequest($key);
+        return $this->send([$request])[0];
+    }
+
+    /**
+     * STAT
+     *
+     * @param string $key
+     * @return StatResponse
+     */
+    public function stat(string $key): StatResponse
+    {
+        $request = new StatRequest($key);
         return $this->send([$request])[0];
     }
 
