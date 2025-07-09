@@ -26,6 +26,7 @@ use Throttr\SDK\Responses\GetResponse;
 use Throttr\SDK\Responses\InfoResponse;
 use Throttr\SDK\Responses\ListResponse;
 use Throttr\SDK\Responses\QueryResponse;
+use Throttr\SDK\Responses\StatsResponse;
 use Throttr\SDK\Responses\StatusResponse;
 
 /**
@@ -177,6 +178,7 @@ class Connection
                     RequestType::GET => GetResponse::fromBytes($buffer, $this->size),
                     RequestType::LIST => ListResponse::fromBytes($buffer, $this->size),
                     RequestType::INFO => InfoResponse::fromBytes($buffer, $this->size),
+                    RequestType::STATS => StatsResponse::fromBytes($buffer, $this->size),
                 };
 
                 if ($response === null) {
