@@ -325,4 +325,77 @@ final class ServiceTest extends TestCase
             $this->assertArrayHasKey("version", $info->attributes);
         });
     }
+
+    public function testStats() {
+        $this->prepares(function (Service $service) {
+            $key = 'STATS_KEY';
+            $stats = $service->stats();
+            $this->assertTrue($stats->status);
+            $this->assertCount(0, $stats->keys);
+
+            $service->insert(
+                key: $key,
+                ttl: 3,
+                ttlType: TTLType::SECONDS,
+                quota: 10,
+            );
+
+            $stats = $service->stats();
+
+            $this->assertTrue($stats->status);
+            $this->assertCount(1, $stats->keys);
+            $this->assertEquals($key, $stats->keys[0]["key"]);
+            $this->assertEquals(0, $stats->keys[0]["reads_per_minute"]);
+            $this->assertEquals(0, $stats->keys[0]["writes_per_minute"]);
+            $this->assertEquals(0, $stats->keys[0]["total_writes"]);
+            $this->assertEquals(0, $stats->keys[0]["total_reads"]);
+
+            $service->purge(
+                key: $key,
+            );
+
+            $stats = $service->stats();
+            $this->assertTrue($stats->status);
+            $this->assertCount(0, $stats->keys);
+        });
+    }
+
+    public function testFragmentedStats() {
+        $this->prepares(function (Service $service) {
+            $stats = $service->stats();
+            $this->assertTrue($stats->status);
+            $this->assertCount(0, $stats->keys);
+
+            $keys = [];
+
+            for ($i = 0; $i < 1000; $i++) {
+                $key = "TEST_FRAGMENTED_STATS_$i";
+                $insertResponse = $service->insert(
+                    key: $key,
+                    ttl: 15,
+                    ttlType: TTLType::SECONDS,
+                    quota: 10,
+                );
+                $keys[] = $key;
+
+                $this->assertTrue($insertResponse->status);
+            }
+
+            $stats = $service->stats();
+
+            $this->assertTrue($stats->status);
+            $this->assertCount(1000, $stats->keys);
+
+            foreach ($keys as $key) {
+                $service->purge(
+                    key: $key,
+                );
+            }
+
+            $stats = $service->stats();
+            $this->assertTrue($stats->status);
+            $this->assertCount(0, $stats->keys);
+        });
+    }
+
 }

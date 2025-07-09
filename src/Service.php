@@ -31,12 +31,14 @@ use Throttr\SDK\Requests\ListRequest;
 use Throttr\SDK\Requests\PurgeRequest;
 use Throttr\SDK\Requests\QueryRequest;
 use Throttr\SDK\Requests\SetRequest;
+use Throttr\SDK\Requests\StatsRequest;
 use Throttr\SDK\Requests\UpdateRequest;
 use Throttr\SDK\Responses\GetResponse;
 use Throttr\SDK\Responses\InfoResponse;
 use Throttr\SDK\Responses\IResponse;
 use Throttr\SDK\Responses\ListResponse;
 use Throttr\SDK\Responses\QueryResponse;
+use Throttr\SDK\Responses\StatsResponse;
 use Throttr\SDK\Responses\StatusResponse;
 
 /**
@@ -151,6 +153,17 @@ final class Service
     public function list(): ListResponse
     {
         $request = new ListRequest();
+        return $this->send([$request])[0];
+    }
+
+    /**
+     * STATS
+     *
+     * @return StatsResponse
+     */
+    public function stats(): StatsResponse
+    {
+        $request = new StatsRequest();
         return $this->send([$request])[0];
     }
 
