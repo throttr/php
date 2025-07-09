@@ -26,6 +26,7 @@ use Throttr\SDK\Responses\GetResponse;
 use Throttr\SDK\Responses\InfoResponse;
 use Throttr\SDK\Responses\ListResponse;
 use Throttr\SDK\Responses\QueryResponse;
+use Throttr\SDK\Responses\StatResponse;
 use Throttr\SDK\Responses\StatsResponse;
 use Throttr\SDK\Responses\StatusResponse;
 
@@ -172,12 +173,14 @@ class Connection
 
             while (!empty($pendingOperations)) {
                 $operation = $pendingOperations[0];
+
                 $response = match ($operation) {
                     RequestType::INSERT, RequestType::UPDATE, RequestType::PURGE, RequestType::SET => StatusResponse::fromBytes($buffer, $this->size),
                     RequestType::QUERY => QueryResponse::fromBytes($buffer, $this->size),
                     RequestType::GET => GetResponse::fromBytes($buffer, $this->size),
                     RequestType::LIST => ListResponse::fromBytes($buffer, $this->size),
                     RequestType::INFO => InfoResponse::fromBytes($buffer, $this->size),
+                    RequestType::STAT => StatResponse::fromBytes($buffer, $this->size),
                     RequestType::STATS => StatsResponse::fromBytes($buffer, $this->size),
                 };
 
