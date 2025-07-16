@@ -24,6 +24,10 @@ use Throttr\SDK\Enum\ChangeType;
 use Throttr\SDK\Enum\ValueSize;
 use Throttr\SDK\Exceptions\ServiceException;
 use Throttr\SDK\Requests\BaseRequest;
+use Throttr\SDK\Requests\ChannelRequest;
+use Throttr\SDK\Requests\ChannelsRequest;
+use Throttr\SDK\Requests\ConnectionRequest;
+use Throttr\SDK\Requests\ConnectionsRequest;
 use Throttr\SDK\Requests\GetRequest;
 use Throttr\SDK\Requests\InfoRequest;
 use Throttr\SDK\Requests\InsertRequest;
@@ -34,6 +38,7 @@ use Throttr\SDK\Requests\SetRequest;
 use Throttr\SDK\Requests\StatRequest;
 use Throttr\SDK\Requests\StatsRequest;
 use Throttr\SDK\Requests\UpdateRequest;
+use Throttr\SDK\Requests\WhoamiRequest;
 use Throttr\SDK\Responses\GetResponse;
 use Throttr\SDK\Responses\InfoResponse;
 use Throttr\SDK\Responses\IResponse;
@@ -256,6 +261,31 @@ final class Service
     {
         $request = new GetRequest($key);
         return $this->send([$request])[0];
+    }
+
+    public function connections() {
+        $request = new ConnectionsRequest();
+        return $this->send($request)[0];
+    }
+
+    public function connection(string $id) {
+        $request = new ConnectionRequest($id);
+        return $this->send($request)[0];
+    }
+
+    public function whoami() {
+        $request = new WhoamiRequest();
+        return $this->send($request)[0];
+    }
+
+    public function channels() {
+        $request = new ChannelsRequest();
+        return $this->send($request)[0];
+    }
+
+    public function channel(string $name) {
+        $request = new ChannelRequest($name);
+        return $this->send($request)[0];
     }
 
     /**

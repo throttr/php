@@ -18,10 +18,15 @@
 namespace Throttr\SDK;
 
 use Co;
+use http\Env\Request;
 use Swoole\Coroutine\Client;
 use Swoole\Coroutine\Channel;
 use Throttr\SDK\Enum\RequestType;
 use Throttr\SDK\Enum\ValueSize;
+use Throttr\SDK\Responses\ChannelResponse;
+use Throttr\SDK\Responses\ChannelsResponse;
+use Throttr\SDK\Responses\ConnectionResponse;
+use Throttr\SDK\Responses\ConnectionsResponse;
 use Throttr\SDK\Responses\GetResponse;
 use Throttr\SDK\Responses\InfoResponse;
 use Throttr\SDK\Responses\ListResponse;
@@ -29,6 +34,7 @@ use Throttr\SDK\Responses\QueryResponse;
 use Throttr\SDK\Responses\StatResponse;
 use Throttr\SDK\Responses\StatsResponse;
 use Throttr\SDK\Responses\StatusResponse;
+use Throttr\SDK\Responses\WhoamiResponse;
 
 /**
  * Connection
@@ -182,6 +188,11 @@ class Connection
                     RequestType::INFO => InfoResponse::fromBytes($buffer, $this->size),
                     RequestType::STAT => StatResponse::fromBytes($buffer, $this->size),
                     RequestType::STATS => StatsResponse::fromBytes($buffer, $this->size),
+                    RequestType::CONNECTIONS => ConnectionsResponse::fromBytes($buffer, $this->size),
+                    RequestType::CONNECTION => ConnectionResponse::fromBytes($buffer, $this->size),
+                    RequestType::CHANNELS => ChannelsResponse::fromBytes($buffer, $this->size),
+                    RequestType::CHANNEL => ChannelResponse::fromBytes($buffer, $this->size),
+                    RequestType::WHOAMI => WhoamiResponse::fromBytes($buffer, $this->size),
                 };
 
                 if ($response === null) {
