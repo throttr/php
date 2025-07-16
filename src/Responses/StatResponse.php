@@ -44,8 +44,6 @@ class StatResponse extends Response implements IResponse {
         $valueSize = $size->value;
         $offset = 0;
 
-        echo bin2hex($data) . "\n";
-
         // Less than 1 byte? not enough for status.
         if (strlen($data) < 1) return null;
 

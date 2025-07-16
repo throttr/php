@@ -428,4 +428,50 @@ final class ServiceTest extends TestCase
         });
     }
 
+    public function testWhoami() {
+        $this->prepares(function (Service $service) {
+            $whoami = $service->whoami();
+            $this->assertTrue($whoami->status);
+            $this->assertTrue(strlen($whoami->id) == 32);
+        });
+    }
+
+    public function testConnections() {
+        $this->prepares(function (Service $service) {
+            $connections = $service->connections();
+            $this->assertTrue($connections->status);
+            $this->assertIsArray($connections->connections);
+            $this->assertCount(1, $connections->connections);
+        });
+    }
+
+    public function testConnection() {
+        $this->prepares(function (Service $service) {
+            $whoami = $service->whoami();
+
+            $connection = $service->connection($whoami->id);
+
+            $this->assertTrue($connection->status);
+            $this->assertIsArray($connection->connection);
+        });
+    }
+
+    public function testChannels() {
+        $this->prepares(function (Service $service) {
+            $channels = $service->channels();
+            $this->assertTrue($channels->status);
+            $this->assertIsArray($channels->channels);
+            $this->assertCount(2, $channels->channels);
+        });
+    }
+
+
+    public function testChannel() {
+        $this->prepares(function (Service $service) {
+            $channel = $service->channel("*");
+            $this->assertTrue($channel->status);
+            $this->assertIsArray($channel->subscribers);
+            $this->assertCount(1, $channel->subscribers);
+        });
+    }
 }
