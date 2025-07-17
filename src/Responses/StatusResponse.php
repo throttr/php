@@ -40,6 +40,6 @@ class StatusResponse extends Response implements IResponse
      */
     public static function fromBytes(string $data, ValueSize $size): StatusResponse|null
     {
-        return new StatusResponse($data, ord($data[$offset]) === 1);
+        return new StatusResponse($data, ord($data[0]) === 1);
     }
 }
