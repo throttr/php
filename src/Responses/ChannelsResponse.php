@@ -17,9 +17,8 @@
 
 namespace Throttr\SDK\Responses;
 
-use Throttr\SDK\Enum\KeyType;
-use Throttr\SDK\Enum\TTLType;
 use Throttr\SDK\Enum\ValueSize;
+use Throttr\SDK\Providers\ReaderProvider;
 use Throttr\SDK\Requests\BaseRequest;
 
 /**
@@ -79,7 +78,6 @@ class ChannelsResponse extends Response implements IResponse
                     return null;
                 }
 
-                $fragment = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
                 $offset += ValueSize::UINT64->value;
 
                 // Less than offset + 8 bytes? not enough for fragment keys count.
@@ -92,46 +90,18 @@ class ChannelsResponse extends Response implements IResponse
 
                 $channels_in_fragment = [];
 
+                if (strlen($data) < $offset + (ValueSize::UINT8->value + ValueSize::UINT64->value * 3) * $number_of_channels) {
+                    return null;
+                }
+
                 // Per key in fragment
                 for ($e = 0; $e < $number_of_channels; ++$e) {
-                    // Less than offset + 1 byte? not enough for key size.
-                    if (strlen($data) < $offset + ValueSize::UINT8->value) {
-                        return null;
-                    }
-
-                    $channel_size = unpack(BaseRequest::pack(ValueSize::UINT8), substr($data, $offset, ValueSize::UINT8->value))[1];
-                    $offset += ValueSize::UINT8->value;
-
-                    // Less than offset + 8 bytes? not enough for read bytes.
-                    if (strlen($data) < $offset + ValueSize::UINT64->value) {
-                        return null;
-                    }
-
-                    $read_bytes = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
-                    $offset += ValueSize::UINT64->value;
-
-                    // Less than offset + 8 bytes? not enough for write bytes.
-                    if (strlen($data) < $offset + ValueSize::UINT64->value) {
-                        return null;
-                    }
-
-                    $write_bytes = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
-                    $offset += ValueSize::UINT64->value;
-
-                    // Less than offset + 8 bytes? not enough for subscriptions.
-                    if (strlen($data) < $offset + ValueSize::UINT64->value) {
-                        return null;
-                    }
-
-                    $subscriptions = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
-                    $offset += ValueSize::UINT64->value;
-
-                    $channels_in_fragment[] = [
-                        "size" => $channel_size,
-                        "read_bytes" => $read_bytes,
-                        "write_bytes" => $write_bytes,
-                        "subscriptions" => $subscriptions,
-                    ];
+                    $channels_in_fragment[] = ReaderProvider::readIntegers($data, [
+                        "size" => ValueSize::UINT8,
+                        "read_bytes" => ValueSize::UINT64,
+                        "write_bytes" => ValueSize::UINT64,
+                        "subscriptions" => ValueSize::UINT64,
+                    ], $offset);
                 }
 
                 $total = array_sum(array_column($channels_in_fragment, 'size'));

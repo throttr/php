@@ -20,6 +20,7 @@ namespace Throttr\SDK\Responses;
 use Throttr\SDK\Enum\KeyType;
 use Throttr\SDK\Enum\TTLType;
 use Throttr\SDK\Enum\ValueSize;
+use Throttr\SDK\Providers\ReaderProvider;
 use Throttr\SDK\Requests\BaseRequest;
 
 /**
@@ -92,55 +93,24 @@ class StatsResponse extends Response implements IResponse
 
                 $keys_in_fragment = [];
 
+                $expected_fragment_size = (
+                    ValueSize::UINT8->value + // key size
+                        ValueSize::UINT64->value * 4 // reads_per_minute, writes_per_minute, total_reads, total_writes
+                ) * $number_of_keys;
+
+                if (strlen($data) < $offset + $expected_fragment_size) {
+                    return null;
+                }
+
                 // Per key in fragment
                 for ($e = 0; $e < $number_of_keys; ++$e) {
-                    // Less than offset + 1 byte? not enough for key size.
-                    if (strlen($data) < $offset + ValueSize::UINT8->value) {
-                        return null;
-                    }
-
-                    $key_size = unpack(BaseRequest::pack(ValueSize::UINT8), substr($data, $offset, ValueSize::UINT8->value))[1];
-                    $offset += ValueSize::UINT8->value;
-
-                    // Less than offset + 8 bytes? not enough for reads per minute.
-                    if (strlen($data) < $offset + ValueSize::UINT64->value) {
-                        return null;
-                    }
-
-                    $reads_per_minute = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
-                    $offset += ValueSize::UINT64->value;
-
-                    // Less than offset + 8 bytes? not enough for writes per minute.
-                    if (strlen($data) < $offset + ValueSize::UINT64->value) {
-                        return null;
-                    }
-
-                    $writes_per_minute = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
-                    $offset += ValueSize::UINT64->value;
-
-                    // Less than offset + 8 bytes? not enough for total reads.
-                    if (strlen($data) < $offset + ValueSize::UINT64->value) {
-                        return null;
-                    }
-
-                    $total_reads = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
-                    $offset += ValueSize::UINT64->value;
-
-                    // Less than offset + 8 bytes? not enough for total reads.
-                    if (strlen($data) < $offset + ValueSize::UINT64->value) {
-                        return null;
-                    }
-
-                    $total_writes = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
-                    $offset += ValueSize::UINT64->value;
-
-                    $keys_in_fragment[] = [
-                        "size" => $key_size,
-                        "reads_per_minute" => $reads_per_minute,
-                        "writes_per_minute" => $writes_per_minute,
-                        "total_reads" => $total_reads,
-                        "total_writes" => $total_writes,
-                    ];
+                    $keys_in_fragment[] = ReaderProvider::readIntegers($data, [
+                        "size" =>  ValueSize::UINT8,
+                        "reads_per_minute" =>  ValueSize::UINT64,
+                        "writes_per_minute" =>  ValueSize::UINT64,
+                        "total_reads" =>  ValueSize::UINT64,
+                        "total_writes" =>  ValueSize::UINT64,
+                    ], $offset);
                 }
 
                 $total = array_sum(array_column($keys_in_fragment, 'size'));

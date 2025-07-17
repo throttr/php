@@ -18,6 +18,7 @@
 namespace Throttr\SDK\Responses;
 
 use Throttr\SDK\Enum\ValueSize;
+use Throttr\SDK\Providers\ReaderProvider;
 use Throttr\SDK\Requests\BaseRequest;
 
 /**
@@ -63,24 +64,14 @@ class StatResponse extends Response implements IResponse
                 return null;
             }
 
-            $reads_per_minute = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
-            $offset += ValueSize::UINT64->value;
+            $stats = ReaderProvider::readIntegers($data, [
+                "reads_per_minute" => ValueSize::UINT64,
+                "writes_per_minute" => ValueSize::UINT64,
+                "total_reads" => ValueSize::UINT64,
+                "total_writes" => ValueSize::UINT64,
+            ], $offset);
 
-            $writes_per_minute = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
-            $offset += ValueSize::UINT64->value;
-
-            $total_reads = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
-            $offset += ValueSize::UINT64->value;
-
-            $total_writes = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
-            $offset += ValueSize::UINT64->value;
-
-            return new StatResponse($data, true, [
-                "reads_per_minute" => $reads_per_minute,
-                "writes_per_minute" => $writes_per_minute,
-                "total_reads" => $total_reads,
-                "total_writes" => $total_writes,
-            ]);
+            return new StatResponse($data, true, $stats);
         }
 
         return new StatResponse($data, false, []);
