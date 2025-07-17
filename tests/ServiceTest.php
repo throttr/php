@@ -432,7 +432,7 @@ final class ServiceTest extends TestCase
         $this->prepares(function (Service $service) {
             $whoami = $service->whoami();
             $this->assertTrue($whoami->status);
-            $this->assertTrue(strlen($whoami->id) == 32);
+            $this->assertEquals(32, strlen($whoami->id));
         });
     }
 

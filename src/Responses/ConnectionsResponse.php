@@ -74,11 +74,6 @@ class ConnectionsResponse extends Response implements IResponse
     {
         $offset = 0;
 
-        // Less than 1 byte? not enough for status.
-        if (strlen($data) < 1) {
-            return null;
-        }
-
         $status = ord($data[$offset]) === 1;
         $offset++;
 

@@ -51,41 +51,26 @@ class GetResponse extends Response implements IResponse
         $valueSize = $size->value;
         $offset = 0;
 
-        // Less than 1 byte? not enough for status.
-        if (strlen($data) < 1) {
-            return null;
-        }
-
         $status = ord($data[$offset]) === 1;
         $offset++;
 
         if ($status) {
             // Less than 2 bytes? not enough for ttl type.
-            if (strlen($data) < 2) {
+            if (strlen($data) < $offset + 1 + $valueSize * 2) {
                 return null;
             }
 
             $ttl_type = TTLType::from(ord($data[$offset]));
             $offset++;
 
-            // Less than 2 + N bytes? not enough for ttl.
-            if (strlen($data) < 2 + $valueSize) {
-                return null;
-            }
-
             $ttl = unpack(BaseRequest::pack($size), substr($data, $offset, $valueSize))[1];
             $offset += $valueSize;
-
-            // Less than 2 + 2 * N bytes? not enough for value size.
-            if (strlen($data) < 2 + ($valueSize * 2)) {
-                return null;
-            }
 
             $value_sized = unpack(BaseRequest::pack($size), substr($data, $offset, $valueSize))[1];
             $offset += $valueSize;
 
             // Less than 2 + 2 * N + O bytes? not enough for value.
-            if (strlen($data) < 2 + ($valueSize * 2) + $value_sized) {
+            if (strlen($data) < $offset + $value_sized) {
                 return null;
             }
 

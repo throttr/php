@@ -48,7 +48,6 @@ class StatsResponse extends Response implements IResponse
      */
     public static function fromBytes(string $data, ValueSize $size): StatsResponse|null
     {
-        $valueSize = $size->value;
         $offset = 0;
 
         // Less than 1 byte? not enough for status.
@@ -80,7 +79,6 @@ class StatsResponse extends Response implements IResponse
                     return null;
                 }
 
-                $fragment = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
                 $offset += ValueSize::UINT64->value;
 
                 // Less than offset + 8 bytes? not enough for fragment keys count.
