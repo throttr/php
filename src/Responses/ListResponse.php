@@ -47,7 +47,6 @@ class ListResponse extends Response implements IResponse
      */
     public static function fromBytes(string $data, ValueSize $size): ListResponse|null
     {
-        $valueSize = $size->value;
         $offset = 0;
 
         // Less than 1 byte? not enough for status.
@@ -79,7 +78,6 @@ class ListResponse extends Response implements IResponse
                     return null;
                 }
 
-                $fragment = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
                 $offset += ValueSize::UINT64->value;
 
                 // Less than offset + 8 bytes? not enough for fragment keys count.
@@ -92,44 +90,29 @@ class ListResponse extends Response implements IResponse
 
                 $keys_in_fragment = [];
 
+                $expected_fragment_size = (
+                    ValueSize::UINT8->value * 3 + // key size, key type, ttl type
+                    ValueSize::UINT64->value + // ttl
+                    $size->value // value size
+                ) * $number_of_keys;
+
+                if (strlen($data) < $offset + $expected_fragment_size) {
+                    return null;
+                }
+
                 // Per key in fragment
                 for ($e = 0; $e < $number_of_keys; ++$e) {
-                    // Less than offset + 1 byte? not enough for key size.
-                    if (strlen($data) < $offset + ValueSize::UINT8->value) {
-                        return null;
-                    }
-
                     $key_size = unpack(BaseRequest::pack(ValueSize::UINT8), substr($data, $offset, ValueSize::UINT8->value))[1];
                     $offset += ValueSize::UINT8->value;
-
-                    // Less than offset + 1 byte? not enough for key type.
-                    if (strlen($data) < $offset + ValueSize::UINT8->value) {
-                        return null;
-                    }
 
                     $key_type = KeyType::from(unpack(BaseRequest::pack(ValueSize::UINT8), substr($data, $offset, ValueSize::UINT8->value))[1]);
                     $offset += ValueSize::UINT8->value;
 
-                    // Less than offset + 1 byte? not enough for ttl type.
-                    if (strlen($data) < $offset + ValueSize::UINT8->value) {
-                        return null;
-                    }
-
                     $ttl_type = TTLType::from(unpack(BaseRequest::pack(ValueSize::UINT8), substr($data, $offset, ValueSize::UINT8->value))[1]);
                     $offset += ValueSize::UINT8->value;
 
-                    // Less than offset + 8 bytes? not enough for ttl.
-                    if (strlen($data) < $offset + ValueSize::UINT64->value) {
-                        return null;
-                    }
-
                     $ttl = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
                     $offset += ValueSize::UINT64->value;
-
-                    // Less than offset + N bytes? not enough for bytes used.
-                    if (strlen($data) < $offset + $size->value) {
-                        return null;
-                    }
 
                     $bytes_used = unpack(BaseRequest::pack($size), substr($data, $offset, $size->value))[1];
                     $offset += $size->value;

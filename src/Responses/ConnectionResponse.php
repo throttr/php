@@ -23,6 +23,7 @@ use Throttr\SDK\Enum\IpVersion;
 use Throttr\SDK\Enum\KeyType;
 use Throttr\SDK\Enum\TTLType;
 use Throttr\SDK\Enum\ValueSize;
+use Throttr\SDK\Providers\ReaderProvider;
 use Throttr\SDK\Requests\BaseRequest;
 
 /**
@@ -42,24 +43,24 @@ class ConnectionResponse extends Response implements IResponse
     }
 
     public static array $types = [
-        "INSERT",
-        "SET",
-        "QUERY",
-        "GET",
-        "UPDATE",
-        "PURGE",
-        "LIST",
-        "INFO",
-        "STAT",
-        "STATS",
-        "PUBLISH",
-        "SUBSCRIBE",
-        "UNSUBSCRIBE",
-        "CONNECTIONS",
-        "CONNECTION",
-        "CHANNELS",
-        "CHANNEL",
-        "WHOAMI"
+        "INSERT" => ValueSize::UINT64,
+        "SET" => ValueSize::UINT64,
+        "QUERY" => ValueSize::UINT64,
+        "GET" => ValueSize::UINT64,
+        "UPDATE" => ValueSize::UINT64,
+        "PURGE" => ValueSize::UINT64,
+        "LIST" => ValueSize::UINT64,
+        "INFO" => ValueSize::UINT64,
+        "STAT" => ValueSize::UINT64,
+        "STATS" => ValueSize::UINT64,
+        "PUBLISH" => ValueSize::UINT64,
+        "SUBSCRIBE" => ValueSize::UINT64,
+        "UNSUBSCRIBE" => ValueSize::UINT64,
+        "CONNECTIONS" => ValueSize::UINT64,
+        "CONNECTION" => ValueSize::UINT64,
+        "CHANNELS" => ValueSize::UINT64,
+        "CHANNEL" => ValueSize::UINT64,
+        "WHOAMI" => ValueSize::UINT64,
     ];
 
     /**
@@ -72,11 +73,6 @@ class ConnectionResponse extends Response implements IResponse
     public static function fromBytes(string $data, ValueSize $size): ConnectionResponse|null
     {
         $offset = 0;
-
-        // Less than 1 byte? not enough for status.
-        if (strlen($data) < 1) {
-            return null;
-        }
 
         $status = ord($data[$offset]) === 1;
         $offset++;
@@ -122,96 +118,36 @@ class ConnectionResponse extends Response implements IResponse
             $ip = substr($data, $offset, 16);
             $offset += 16;
 
-            // Less than offset + 2 bytes? not enough for port.
-            if (strlen($data) < $offset + ValueSize::UINT16->value) {
+            // Less than offset + 2 + 8 * 7 bytes? not enough for attributes.
+            if (strlen($data) < $offset + ValueSize::UINT16->value + ValueSize::UINT64->value * 7) {
                 return null;
             }
 
-            $port = unpack(BaseRequest::pack(ValueSize::UINT16), substr($data, $offset, ValueSize::UINT16->value))[1];
-            $offset += ValueSize::UINT16->value;
+            $attributes = ReaderProvider::readIntegers($data, [
+                "port" => ValueSize::UINT16,
+                "connected_at" => ValueSize::UINT64,
+                "read_bytes" => ValueSize::UINT64,
+                "write_bytes" => ValueSize::UINT64,
+                "published_bytes" => ValueSize::UINT64,
+                "received_bytes" => ValueSize::UINT64,
+                "allocated_bytes" => ValueSize::UINT64,
+                "consumed_bytes" => ValueSize::UINT64,
+            ], $offset);
 
-            // Less than offset + 8 bytes? not enough for connected at.
-            if (strlen($data) < $offset + ValueSize::UINT64->value) {
+            if (strlen($data) < $offset + ValueSize::UINT64->value * count(static::$types)) {
                 return null;
             }
 
-            $connected_at = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
-            $offset += ValueSize::UINT64->value;
+            $requests = ReaderProvider::readIntegers($data, static::$types, $offset);
 
-            // Less than offset + 8 bytes? not enough for read bytes.
-            if (strlen($data) < $offset + ValueSize::UINT64->value) {
-                return null;
-            }
-
-            $ready_bytes = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
-            $offset += ValueSize::UINT64->value;
-
-            // Less than offset + 8 bytes? not enough for write bytes.
-            if (strlen($data) < $offset + ValueSize::UINT64->value) {
-                return null;
-            }
-
-            $write_bytes = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
-            $offset += ValueSize::UINT64->value;
-
-            // Less than offset + 8 bytes? not enough for published bytes.
-            if (strlen($data) < $offset + ValueSize::UINT64->value) {
-                return null;
-            }
-
-            $published_bytes = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
-            $offset += ValueSize::UINT64->value;
-
-            // Less than offset + 8 bytes? not enough for received bytes.
-            if (strlen($data) < $offset + ValueSize::UINT64->value) {
-                return null;
-            }
-
-            $received_bytes = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
-            $offset += ValueSize::UINT64->value;
-
-            // Less than offset + 8 bytes? not enough for allocated bytes.
-            if (strlen($data) < $offset + ValueSize::UINT64->value) {
-                return null;
-            }
-
-            $allocated_bytes = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
-            $offset += ValueSize::UINT64->value;
-
-            // Less than offset + 8 bytes? not enough for consumed bytes.
-            if (strlen($data) < $offset + ValueSize::UINT64->value) {
-                return null;
-            }
-
-            $consumed_bytes = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
-            $offset += ValueSize::UINT64->value;
-
-            $requests = [];
-            foreach (static::$types as $request_type) {
-                // Less than offset + 8 bytes? not enough for requests metric.
-                if (strlen($data) < $offset + ValueSize::UINT64->value) {
-                    return null;
-                }
-                $requests[$request_type] = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
-                $offset += ValueSize::UINT64->value;
-            }
-
-            return new ConnectionResponse($data, true, [
+            return new ConnectionResponse($data, true, array_merge([
                 "id" => bin2hex($id),
                 "type" => $type,
                 "kind" => $kind,
                 "ip_version" => $ip_version,
                 "ip" => $ip,
-                "port" => $port,
-                "connected_at" => $connected_at,
-                "read_bytes" => $ready_bytes,
-                "write_bytes" => $write_bytes,
-                "published_bytes" => $published_bytes,
-                "received_bytes" => $received_bytes,
-                "allocated_bytes" => $allocated_bytes,
-                "consumed_bytes" => $consumed_bytes,
                 "requests" => $requests,
-            ]);
+            ], $attributes));
         }
 
         return new ConnectionResponse($data, false, []);

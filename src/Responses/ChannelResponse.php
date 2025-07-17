@@ -20,6 +20,7 @@ namespace Throttr\SDK\Responses;
 use Throttr\SDK\Enum\KeyType;
 use Throttr\SDK\Enum\TTLType;
 use Throttr\SDK\Enum\ValueSize;
+use Throttr\SDK\Providers\ReaderProvider;
 use Throttr\SDK\Requests\BaseRequest;
 
 /**
@@ -47,71 +48,40 @@ class ChannelResponse extends Response implements IResponse
      */
     public static function fromBytes(string $data, ValueSize $size): ChannelResponse|null
     {
-        $valueSize = $size->value;
         $offset = 0;
-
-        // Less than 1 byte? not enough for status.
-        if (strlen($data) < 1) {
-            return null;
-        }
 
         $status = ord($data[$offset]) === 1;
         $offset++;
 
         if ($status) {
-            // Less than 1 + N bytes? not enough for number of subscribers.
-            if (strlen($data) < 1 + 8) {
+            // Less than 8 bytes? not enough for status and number of subscribers.
+            if (strlen($data) < $offset + 8) {
                 return null;
             }
 
             $subscribers = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
             $offset += ValueSize::UINT64->value;
 
-            if ($subscribers === 0) {
-                return new ChannelResponse($data, true, []);
-            }
-
             $subscribers_container = [];
 
-            for ($i = 0; $i < $subscribers; ++$i) {
-                // Less than offset + 16 bytes? not enough for connection id.
-                if (strlen($data) < $offset + 16) {
-                    return null;
-                }
+            if (strlen($data) < $offset + (16 + ValueSize::UINT64->value * 3) * $subscribers) {
+                return null;
+            }
 
+            for ($i = 0; $i < $subscribers; ++$i) {
                 $id = substr($data, $offset, 16);
                 $offset += 16;
 
-                // Less than offset + 8 bytes? not enough for subscribed at.
-                if (strlen($data) < $offset + ValueSize::UINT64->value) {
-                    return null;
-                }
+                $values = ReaderProvider::readIntegers($data, [
+                    "subscribed_at" => ValueSize::UINT64,
+                    "read_bytes" => ValueSize::UINT64,
+                    "write_bytes" => ValueSize::UINT64,
+                ], $offset);
 
-                $subscribed_at = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
-                $offset += ValueSize::UINT64->value;
-
-                // Less than offset + 8 bytes? not enough for read bytes.
-                if (strlen($data) < $offset + ValueSize::UINT64->value) {
-                    return null;
-                }
-
-                $read_bytes = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
-                $offset += ValueSize::UINT64->value;
-
-                // Less than offset + 8 bytes? not enough for write bytes.
-                if (strlen($data) < $offset + ValueSize::UINT64->value) {
-                    return null;
-                }
-
-                $write_bytes = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
-                $offset += ValueSize::UINT64->value;
-
-                $subscribers_container[] = [
-                    "id" => bin2hex($id),
-                    "subscribed_at" => $subscribed_at,
-                    "read_bytes" => $read_bytes,
-                    "write_bytes" => $write_bytes,
-                ];
+                $subscribers_container[] = array_merge(
+                    ["id" => bin2hex($id)],
+                    $values
+                );
             }
 
             return new ChannelResponse($data, true, $subscribers_container);
