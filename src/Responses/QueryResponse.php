@@ -51,35 +51,22 @@ class QueryResponse extends Response implements IResponse
         $valueSize = $size->value;
         $offset = 0;
 
-        // Less than 1 byte? not enough for status.
-        if (strlen($data) < 1) {
-            return null;
-        }
-
         $status = ord($data[$offset]) === 1;
         $offset++;
 
         if ($status) {
-            // Less than 1 + N bytes? not enough for quota.
-            if (strlen($data) < 1 + $valueSize) {
+            if (strlen($data) < $offset +
+                $valueSize * 2 + // quota and ttl
+                1 // ttl type
+            ) {
                 return null;
             }
 
             $quota = unpack(BaseRequest::pack($size), substr($data, $offset, $valueSize))[1];
             $offset += $size->value;
 
-            // Less than 2 + N bytes? not enough for ttl type.
-            if (strlen($data) < 2 + $valueSize) {
-                return null;
-            }
-
             $ttl_type = TTLType::from(ord($data[$offset]));
             $offset++;
-
-            // Less than 2 + 2N bytes? not enough for ttl.
-            if (strlen($data) < 2 + ($valueSize * 2)) {
-                return null;
-            }
 
             $ttl = unpack(BaseRequest::pack($size), substr($data, $offset, $valueSize))[1];
             return new QueryResponse($data, true, $quota, $ttl_type, $ttl);
