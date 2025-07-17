@@ -46,8 +46,7 @@ class InsertRequest extends BaseRequest
         public int     $quota,
         public TTLType $ttl_type,
         public int     $ttl
-    )
-    {
+    ) {
     }
 
     /**

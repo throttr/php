@@ -46,8 +46,7 @@ class SetRequest extends BaseRequest
         public TTLType $ttl_type,
         public int     $ttl,
         public string $value,
-    )
-    {
+    ) {
     }
 
     /**

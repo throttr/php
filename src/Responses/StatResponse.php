@@ -23,7 +23,8 @@ use Throttr\SDK\Requests\BaseRequest;
 /**
  * StatResponse
  */
-class StatResponse extends Response implements IResponse {
+class StatResponse extends Response implements IResponse
+{
     /**
      * Constructor
      *
@@ -31,7 +32,9 @@ class StatResponse extends Response implements IResponse {
      * @param bool $status
      * @param array $attributes
      */
-    public function __construct(public string $data, public bool $status, public array $attributes) {}
+    public function __construct(public string $data, public bool $status, public array $attributes)
+    {
+    }
 
     /**
      * From bytes
@@ -40,12 +43,15 @@ class StatResponse extends Response implements IResponse {
      * @param ValueSize $size
      * @return StatResponse|null
      */
-    public static function fromBytes(string $data, ValueSize $size) : StatResponse|null {
+    public static function fromBytes(string $data, ValueSize $size): StatResponse|null
+    {
         $valueSize = $size->value;
         $offset = 0;
 
         // Less than 1 byte? not enough for status.
-        if (strlen($data) < 1) return null;
+        if (strlen($data) < 1) {
+            return null;
+        }
 
         $status = ord($data[$offset]) === 1;
 
@@ -53,7 +59,9 @@ class StatResponse extends Response implements IResponse {
 
         if ($status) {
             // Less than offset + 32 bytes? not enough for fields.
-            if (strlen($data) < $offset + 32) return null;
+            if (strlen($data) < $offset + 32) {
+                return null;
+            }
 
             $reads_per_minute = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
             $offset += ValueSize::UINT64->value;
@@ -75,7 +83,6 @@ class StatResponse extends Response implements IResponse {
             ]);
         }
 
-        return new StatResponse($data, false,  []);
+        return new StatResponse($data, false, []);
     }
 }
-

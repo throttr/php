@@ -25,7 +25,8 @@ use Throttr\SDK\Requests\BaseRequest;
 /**
  * ChannelsResponse
  */
-class ChannelsResponse extends Response implements IResponse {
+class ChannelsResponse extends Response implements IResponse
+{
     /**
      * Constructor
      *
@@ -33,7 +34,9 @@ class ChannelsResponse extends Response implements IResponse {
      * @param bool $status
      * @param array $channels
      */
-    public function __construct(public string $data, public bool $status, public array $channels) {}
+    public function __construct(public string $data, public bool $status, public array $channels)
+    {
+    }
 
     /**
      * From bytes
@@ -42,36 +45,47 @@ class ChannelsResponse extends Response implements IResponse {
      * @param ValueSize $size
      * @return ChannelsResponse|null
      */
-    public static function fromBytes(string $data, ValueSize $size) : ChannelsResponse|null {
+    public static function fromBytes(string $data, ValueSize $size): ChannelsResponse|null
+    {
         $valueSize = $size->value;
         $offset = 0;
 
         // Less than 1 byte? not enough for status.
-        if (strlen($data) < 1) return null;
+        if (strlen($data) < 1) {
+            return null;
+        }
 
         $status = ord($data[$offset]) === 1;
         $offset++;
 
         if ($status) {
             // Less than 1 + N bytes? not enough for quota.
-            if (strlen($data) < 1 + 8) return null;
+            if (strlen($data) < 1 + 8) {
+                return null;
+            }
 
             $fragments = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
             $offset += ValueSize::UINT64->value;
 
-            if ($fragments === 0) return new ChannelsResponse($data, true, []);
+            if ($fragments === 0) {
+                return new ChannelsResponse($data, true, []);
+            }
 
             $channels_container = [];
 
             for ($i = 0; $i < $fragments; ++$i) {
                 // Less than offset + 8 bytes? not enough for fragment index.
-                if (strlen($data) < $offset + ValueSize::UINT64->value) return null;
+                if (strlen($data) < $offset + ValueSize::UINT64->value) {
+                    return null;
+                }
 
                 $fragment = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
                 $offset += ValueSize::UINT64->value;
 
                 // Less than offset + 8 bytes? not enough for fragment keys count.
-                if (strlen($data) < $offset + ValueSize::UINT64->value) return null;
+                if (strlen($data) < $offset + ValueSize::UINT64->value) {
+                    return null;
+                }
 
                 $number_of_channels = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
                 $offset += ValueSize::UINT64->value;
@@ -81,25 +95,33 @@ class ChannelsResponse extends Response implements IResponse {
                 // Per key in fragment
                 for ($e = 0; $e < $number_of_channels; ++$e) {
                     // Less than offset + 1 byte? not enough for key size.
-                    if (strlen($data) < $offset + ValueSize::UINT8->value) return null;
+                    if (strlen($data) < $offset + ValueSize::UINT8->value) {
+                        return null;
+                    }
 
                     $channel_size = unpack(BaseRequest::pack(ValueSize::UINT8), substr($data, $offset, ValueSize::UINT8->value))[1];
                     $offset += ValueSize::UINT8->value;
 
                     // Less than offset + 8 bytes? not enough for read bytes.
-                    if (strlen($data) < $offset + ValueSize::UINT64->value) return null;
+                    if (strlen($data) < $offset + ValueSize::UINT64->value) {
+                        return null;
+                    }
 
                     $read_bytes = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
                     $offset += ValueSize::UINT64->value;
 
                     // Less than offset + 8 bytes? not enough for write bytes.
-                    if (strlen($data) < $offset + ValueSize::UINT64->value) return null;
+                    if (strlen($data) < $offset + ValueSize::UINT64->value) {
+                        return null;
+                    }
 
                     $write_bytes = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
                     $offset += ValueSize::UINT64->value;
 
                     // Less than offset + 8 bytes? not enough for subscriptions.
-                    if (strlen($data) < $offset + ValueSize::UINT64->value) return null;
+                    if (strlen($data) < $offset + ValueSize::UINT64->value) {
+                        return null;
+                    }
 
                     $subscriptions = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
                     $offset += ValueSize::UINT64->value;
@@ -115,7 +137,9 @@ class ChannelsResponse extends Response implements IResponse {
                 $total = array_sum(array_column($channels_in_fragment, 'size'));
 
                 // Less than offset + total channels bytes? not enough for name parsing
-                if (strlen($data) < $offset + $total) return null;
+                if (strlen($data) < $offset + $total) {
+                    return null;
+                }
 
                 for ($e = 0; $e < $number_of_channels; ++$e) {
                     $channels_in_fragment[$e]["name"] = substr($data, $offset, $channels_in_fragment[$e]["size"]);
@@ -132,4 +156,3 @@ class ChannelsResponse extends Response implements IResponse {
         return new ChannelsResponse($data, false, []);
     }
 }
-

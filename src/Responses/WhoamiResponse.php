@@ -22,8 +22,8 @@ use Throttr\SDK\Enum\ValueSize;
 /**
  * WhoamiResponse
  */
-class WhoamiResponse extends Response implements IResponse {
-
+class WhoamiResponse extends Response implements IResponse
+{
     /**
      * Constructor
      *
@@ -31,7 +31,8 @@ class WhoamiResponse extends Response implements IResponse {
      * @param bool $status
      * @param string $id
      */
-    public function __construct(public string $data, public bool $status, public string $id) {
+    public function __construct(public string $data, public bool $status, public string $id)
+    {
     }
 
     /**
@@ -41,11 +42,14 @@ class WhoamiResponse extends Response implements IResponse {
      * @param ValueSize $size
      * @return WhoamiResponse|null
      */
-    public static function fromBytes(string $data, ValueSize $size) : WhoamiResponse|null {
+    public static function fromBytes(string $data, ValueSize $size): WhoamiResponse|null
+    {
         $offset = 0;
 
         // Less than 1 byte? not enough for status.
-        if (strlen($data) < 17) return null;
+        if (strlen($data) < 17) {
+            return null;
+        }
 
         $status = ord($data[$offset]) === 1;
 
@@ -54,4 +58,3 @@ class WhoamiResponse extends Response implements IResponse {
         return new WhoamiResponse($data, $status, bin2hex($id));
     }
 }
-

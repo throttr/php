@@ -39,8 +39,7 @@ class PurgeRequest extends BaseRequest
      */
     public function __construct(
         public string $key
-    )
-    {
+    ) {
     }
 
     /**

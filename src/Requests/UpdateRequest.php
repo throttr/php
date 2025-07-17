@@ -48,8 +48,7 @@ class UpdateRequest extends BaseRequest
         public ChangeType    $change,
         public int           $value,
         public string        $key
-    )
-    {
+    ) {
     }
 
     /**

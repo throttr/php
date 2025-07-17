@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 // Copyright (C) 2025 Ian Torres
 //
@@ -39,6 +41,10 @@ use Throttr\SDK\Requests\StatRequest;
 use Throttr\SDK\Requests\StatsRequest;
 use Throttr\SDK\Requests\UpdateRequest;
 use Throttr\SDK\Requests\WhoamiRequest;
+use Throttr\SDK\Responses\ChannelResponse;
+use Throttr\SDK\Responses\ChannelsResponse;
+use Throttr\SDK\Responses\ConnectionResponse;
+use Throttr\SDK\Responses\ConnectionsResponse;
 use Throttr\SDK\Responses\GetResponse;
 use Throttr\SDK\Responses\InfoResponse;
 use Throttr\SDK\Responses\IResponse;
@@ -47,6 +53,7 @@ use Throttr\SDK\Responses\QueryResponse;
 use Throttr\SDK\Responses\StatResponse;
 use Throttr\SDK\Responses\StatsResponse;
 use Throttr\SDK\Responses\StatusResponse;
+use Throttr\SDK\Responses\WhoamiResponse;
 
 /**
  * Service
@@ -263,27 +270,59 @@ final class Service
         return $this->send([$request])[0];
     }
 
-    public function connections() {
+    /**
+     * CONNECTIONS
+     *
+     * @return mixed
+     */
+    public function connections(): ConnectionsResponse
+    {
         $request = new ConnectionsRequest();
         return $this->send($request)[0];
     }
 
-    public function connection(string $id) {
+    /**
+     * CONNECTION
+     *
+     * @param string $id
+     * @return mixed
+     */
+    public function connection(string $id): ConnectionResponse
+    {
         $request = new ConnectionRequest($id);
         return $this->send($request)[0];
     }
 
-    public function whoami() {
+    /**
+     * WHOAMI
+     *
+     * @return mixed
+     */
+    public function whoami(): WhoamiResponse
+    {
         $request = new WhoamiRequest();
         return $this->send($request)[0];
     }
 
-    public function channels() {
+    /**
+     * CHANNELS
+     *
+     * @return mixed
+     */
+    public function channels(): ChannelsResponse
+    {
         $request = new ChannelsRequest();
         return $this->send($request)[0];
     }
 
-    public function channel(string $name) {
+    /**
+     * CHANNEL
+     *
+     * @param string $name
+     * @return mixed
+     */
+    public function channel(string $name): ChannelResponse
+    {
         $request = new ChannelRequest($name);
         return $this->send($request)[0];
     }

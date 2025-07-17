@@ -101,8 +101,8 @@ class Connection
         $this->pendingChannels = new Channel(1024);
 
         $this->tasks = [
-            go(fn() => $this->processQueue()),
-            go(fn() => $this->processResponses()),
+            go(fn () => $this->processQueue()),
+            go(fn () => $this->processResponses()),
         ];
     }
 

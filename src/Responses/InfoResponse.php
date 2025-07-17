@@ -25,7 +25,8 @@ use Throttr\SDK\Requests\BaseRequest;
 /**
  * InfoResponse
  */
-class InfoResponse extends Response implements IResponse {
+class InfoResponse extends Response implements IResponse
+{
     /**
      * Constructor
      *
@@ -33,7 +34,9 @@ class InfoResponse extends Response implements IResponse {
      * @param bool $status
      * @param array $attributes
      */
-    public function __construct(public string $data, public bool $status, public array $attributes) {}
+    public function __construct(public string $data, public bool $status, public array $attributes)
+    {
+    }
 
     /**
      * From bytes
@@ -42,11 +45,14 @@ class InfoResponse extends Response implements IResponse {
      * @param ValueSize $size
      * @return InfoResponse|null
      */
-    public static function fromBytes(string $data, ValueSize $size) : InfoResponse|null {
+    public static function fromBytes(string $data, ValueSize $size): InfoResponse|null
+    {
         $valueSize = $size->value;
         $offset = 0;
 
-        if (strlen($data) < 433) return null;
+        if (strlen($data) < 433) {
+            return null;
+        }
 
         $status = ord($data[$offset]) === 1;
         $offset++;
@@ -157,4 +163,3 @@ class InfoResponse extends Response implements IResponse {
         return new InfoResponse($data, false, []);
     }
 }
-
