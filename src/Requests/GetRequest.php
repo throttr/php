@@ -39,8 +39,7 @@ class GetRequest extends BaseRequest
      */
     public function __construct(
         public string $key
-    )
-    {
+    ) {
     }
 
     /**

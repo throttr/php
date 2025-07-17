@@ -39,8 +39,7 @@ class ChannelRequest extends BaseRequest
      */
     public function __construct(
         public string $name
-    )
-    {
+    ) {
     }
 
     /**

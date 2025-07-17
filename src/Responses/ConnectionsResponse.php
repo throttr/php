@@ -28,7 +28,8 @@ use Throttr\SDK\Requests\BaseRequest;
 /**
  * ConnectionsResponse
  */
-class ConnectionsResponse extends Response implements IResponse {
+class ConnectionsResponse extends Response implements IResponse
+{
     /**
      * Constructor
      *
@@ -36,7 +37,9 @@ class ConnectionsResponse extends Response implements IResponse {
      * @param bool $status
      * @param array $connections
      */
-    public function __construct(public string $data, public bool $status, public array $connections) {}
+    public function __construct(public string $data, public bool $status, public array $connections)
+    {
+    }
 
     public static array $types = [
         "INSERT",
@@ -66,36 +69,46 @@ class ConnectionsResponse extends Response implements IResponse {
      * @param ValueSize $size
      * @return ListResponse|null
      */
-    public static function fromBytes(string $data, ValueSize $size) : ConnectionsResponse|null {
-        $valueSize = $size->value;
+    public static function fromBytes(string $data, ValueSize $size): ConnectionsResponse|null
+    {
         $offset = 0;
 
         // Less than 1 byte? not enough for status.
-        if (strlen($data) < 1) return null;
+        if (strlen($data) < 1) {
+            return null;
+        }
 
         $status = ord($data[$offset]) === 1;
         $offset++;
 
         if ($status) {
             // Less than 1 + N bytes? not enough for quota.
-            if (strlen($data) < 1 + 8) return null;
+            if (strlen($data) < 1 + 8) {
+                return null;
+            }
 
             $fragments = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
             $offset += ValueSize::UINT64->value;
 
-            if ($fragments === 0) return new ConnectionsResponse($data, true, []);
+            if ($fragments === 0) {
+                return new ConnectionsResponse($data, true, []);
+            }
 
             $connections = [];
 
             for ($i = 0; $i < $fragments; ++$i) {
                 // Less than offset + 8 bytes? not enough for fragment index.
-                if (strlen($data) < $offset + ValueSize::UINT64->value) return null;
+                if (strlen($data) < $offset + ValueSize::UINT64->value) {
+                    return null;
+                }
 
                 $fragment = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
                 $offset += ValueSize::UINT64->value;
 
                 // Less than offset + 8 bytes? not enough for fragment keys count.
-                if (strlen($data) < $offset + ValueSize::UINT64->value) return null;
+                if (strlen($data) < $offset + ValueSize::UINT64->value) {
+                    return null;
+                }
 
                 $number_of_connections = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
                 $offset += ValueSize::UINT64->value;
@@ -104,73 +117,97 @@ class ConnectionsResponse extends Response implements IResponse {
                 for ($e = 0; $e < $number_of_connections; ++$e) {
 
                     // Less than offset + 16 bytes? not enough for uuid.
-                    if (strlen($data) < $offset + 16) return null;
+                    if (strlen($data) < $offset + 16) {
+                        return null;
+                    }
 
                     $id = substr($data, $offset, 16);
                     $offset += 16;
 
                     // Less than offset + 1 byte? not enough for type.
-                    if (strlen($data) < $offset + ValueSize::UINT8->value) return null;
+                    if (strlen($data) < $offset + ValueSize::UINT8->value) {
+                        return null;
+                    }
 
                     $type = ConnectionType::from(unpack(BaseRequest::pack(ValueSize::UINT8), substr($data, $offset, ValueSize::UINT8->value))[1]);
                     $offset += ValueSize::UINT8->value;
 
                     // Less than offset + 1 byte? not enough for kind.
-                    if (strlen($data) < $offset + ValueSize::UINT8->value) return null;
+                    if (strlen($data) < $offset + ValueSize::UINT8->value) {
+                        return null;
+                    }
 
                     $kind = ConnectionKind::from(unpack(BaseRequest::pack(ValueSize::UINT8), substr($data, $offset, ValueSize::UINT8->value))[1]);
                     $offset += ValueSize::UINT8->value;
 
                     // Less than offset + 1 byte? not enough for ip version.
-                    if (strlen($data) < $offset + ValueSize::UINT8->value) return null;
+                    if (strlen($data) < $offset + ValueSize::UINT8->value) {
+                        return null;
+                    }
 
                     $ip_version = IpVersion::from(unpack(BaseRequest::pack(ValueSize::UINT8), substr($data, $offset, ValueSize::UINT8->value))[1]);
                     $offset += ValueSize::UINT8->value;
 
                     // Less than offset + 16 bytes? not enough for ip.
-                    if (strlen($data) < $offset + 16) return null;
+                    if (strlen($data) < $offset + 16) {
+                        return null;
+                    }
 
                     $ip = substr($data, $offset, 16);
                     $offset += 16;
 
                     // Less than offset + 2 bytes? not enough for port.
-                    if (strlen($data) < $offset + ValueSize::UINT16->value) return null;
+                    if (strlen($data) < $offset + ValueSize::UINT16->value) {
+                        return null;
+                    }
 
                     $port = unpack(BaseRequest::pack(ValueSize::UINT16), substr($data, $offset, ValueSize::UINT16->value))[1];
                     $offset += ValueSize::UINT16->value;
 
                     // Less than offset + 8 bytes? not enough for connected at.
-                    if (strlen($data) < $offset + ValueSize::UINT64->value) return null;
+                    if (strlen($data) < $offset + ValueSize::UINT64->value) {
+                        return null;
+                    }
 
                     $connected_at = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
                     $offset += ValueSize::UINT64->value;
 
                     // Less than offset + 8 bytes? not enough for read bytes.
-                    if (strlen($data) < $offset + ValueSize::UINT64->value) return null;
+                    if (strlen($data) < $offset + ValueSize::UINT64->value) {
+                        return null;
+                    }
 
                     $ready_bytes = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
                     $offset += ValueSize::UINT64->value;
 
                     // Less than offset + 8 bytes? not enough for write bytes.
-                    if (strlen($data) < $offset + ValueSize::UINT64->value) return null;
+                    if (strlen($data) < $offset + ValueSize::UINT64->value) {
+                        return null;
+                    }
 
                     $write_bytes = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
                     $offset += ValueSize::UINT64->value;
 
                     // Less than offset + 8 bytes? not enough for published bytes.
-                    if (strlen($data) < $offset + ValueSize::UINT64->value) return null;
+                    if (strlen($data) < $offset + ValueSize::UINT64->value) {
+                        return null;
+                    }
 
                     $published_bytes = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
                     $offset += ValueSize::UINT64->value;
 
                     // Less than offset + 8 bytes? not enough for received bytes.
-                    if (strlen($data) < $offset + ValueSize::UINT64->value) return null;
+                    if (strlen($data) < $offset + ValueSize::UINT64->value) {
+                        return null;
+                    }
 
                     $received_bytes = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
                     $offset += ValueSize::UINT64->value;
 
                     // Less than offset + 8 bytes? not enough for allocated bytes.
-                    if (strlen($data) < $offset + ValueSize::UINT64->value) return null;
+                    if (strlen($data) < $offset + ValueSize::UINT64->value) {
+                        return null;
+                    }
 
                     $allocated_bytes = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
                     $offset += ValueSize::UINT64->value;
@@ -178,7 +215,9 @@ class ConnectionsResponse extends Response implements IResponse {
                     $requests = [];
                     foreach (static::$types as $request_type) {
                         // Less than offset + 8 bytes? not enough for requests metric.
-                        if (strlen($data) < $offset + ValueSize::UINT64->value) return null;
+                        if (strlen($data) < $offset + ValueSize::UINT64->value) {
+                            return null;
+                        }
                         $requests[$request_type] = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
                         $offset += ValueSize::UINT64->value;
                     }
@@ -207,4 +246,3 @@ class ConnectionsResponse extends Response implements IResponse {
         return new ConnectionsResponse($data, false, []);
     }
 }
-

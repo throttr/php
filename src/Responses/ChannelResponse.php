@@ -25,7 +25,8 @@ use Throttr\SDK\Requests\BaseRequest;
 /**
  * ChannelsResponse
  */
-class ChannelResponse extends Response implements IResponse {
+class ChannelResponse extends Response implements IResponse
+{
     /**
      * Constructor
      *
@@ -33,7 +34,9 @@ class ChannelResponse extends Response implements IResponse {
      * @param bool $status
      * @param array $subscribers
      */
-    public function __construct(public string $data, public bool $status, public array $subscribers) {}
+    public function __construct(public string $data, public bool $status, public array $subscribers)
+    {
+    }
 
     /**
      * From bytes
@@ -42,48 +45,63 @@ class ChannelResponse extends Response implements IResponse {
      * @param ValueSize $size
      * @return ChannelsResponse|null
      */
-    public static function fromBytes(string $data, ValueSize $size) : ChannelResponse|null {
+    public static function fromBytes(string $data, ValueSize $size): ChannelResponse|null
+    {
         $valueSize = $size->value;
         $offset = 0;
 
         // Less than 1 byte? not enough for status.
-        if (strlen($data) < 1) return null;
+        if (strlen($data) < 1) {
+            return null;
+        }
 
         $status = ord($data[$offset]) === 1;
         $offset++;
 
         if ($status) {
             // Less than 1 + N bytes? not enough for number of subscribers.
-            if (strlen($data) < 1 + 8) return null;
+            if (strlen($data) < 1 + 8) {
+                return null;
+            }
 
             $subscribers = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
             $offset += ValueSize::UINT64->value;
 
-            if ($subscribers === 0) return new ChannelResponse($data, true, []);
+            if ($subscribers === 0) {
+                return new ChannelResponse($data, true, []);
+            }
 
             $subscribers_container = [];
 
             for ($i = 0; $i < $subscribers; ++$i) {
                 // Less than offset + 16 bytes? not enough for connection id.
-                if (strlen($data) < $offset + 16) return null;
+                if (strlen($data) < $offset + 16) {
+                    return null;
+                }
 
                 $id = substr($data, $offset, 16);
                 $offset += 16;
 
                 // Less than offset + 8 bytes? not enough for subscribed at.
-                if (strlen($data) < $offset + ValueSize::UINT64->value) return null;
+                if (strlen($data) < $offset + ValueSize::UINT64->value) {
+                    return null;
+                }
 
                 $subscribed_at = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
                 $offset += ValueSize::UINT64->value;
 
                 // Less than offset + 8 bytes? not enough for read bytes.
-                if (strlen($data) < $offset + ValueSize::UINT64->value) return null;
+                if (strlen($data) < $offset + ValueSize::UINT64->value) {
+                    return null;
+                }
 
                 $read_bytes = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
                 $offset += ValueSize::UINT64->value;
 
                 // Less than offset + 8 bytes? not enough for write bytes.
-                if (strlen($data) < $offset + ValueSize::UINT64->value) return null;
+                if (strlen($data) < $offset + ValueSize::UINT64->value) {
+                    return null;
+                }
 
                 $write_bytes = unpack(BaseRequest::pack(ValueSize::UINT64), substr($data, $offset, ValueSize::UINT64->value))[1];
                 $offset += ValueSize::UINT64->value;
@@ -102,4 +120,3 @@ class ChannelResponse extends Response implements IResponse {
         return new ChannelResponse($data, false, []);
     }
 }
-

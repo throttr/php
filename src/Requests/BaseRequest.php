@@ -24,7 +24,8 @@ use Throttr\SDK\Enum\ValueSize;
 /**
  * Base request
  */
-abstract class BaseRequest implements ShouldDefineSerialization {
+abstract class BaseRequest implements ShouldDefineSerialization
+{
     /**
      * Type
      *
@@ -38,7 +39,8 @@ abstract class BaseRequest implements ShouldDefineSerialization {
      * @param ValueSize $size
      * @return string
      */
-    public static function pack(ValueSize $size): string {
+    public static function pack(ValueSize $size): string
+    {
         return match ($size) {
             ValueSize::UINT8 => 'C', // @codeCoverageIgnore
             ValueSize::UINT16 => 'v', // @codeCoverageIgnore

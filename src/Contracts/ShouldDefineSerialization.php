@@ -6,5 +6,5 @@ use Throttr\SDK\Enum\ValueSize;
 
 interface ShouldDefineSerialization
 {
-    public function toBytes(ValueSize $size) : string;
+    public function toBytes(ValueSize $size): string;
 }

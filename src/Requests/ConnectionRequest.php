@@ -39,8 +39,7 @@ class ConnectionRequest extends BaseRequest
      */
     public function __construct(
         public string $id
-    )
-    {
+    ) {
     }
 
     /**

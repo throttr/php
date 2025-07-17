@@ -39,8 +39,7 @@ class QueryRequest extends BaseRequest
      */
     public function __construct(
         public string $key
-    )
-    {
+    ) {
     }
 
     /**
